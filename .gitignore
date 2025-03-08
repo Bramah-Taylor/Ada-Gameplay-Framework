@@ -72,3 +72,7 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+/AdaCore/Binaries
+/AdaCore/Intermediate
+/AdaGameplay/Binaries
+/AdaGameplay/Intermediate
