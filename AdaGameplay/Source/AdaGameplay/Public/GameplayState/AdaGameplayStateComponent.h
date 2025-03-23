@@ -69,7 +69,6 @@ protected:
 
 	void NotifyAttributeChanged(FAdaAttribute& Attribute, const float OldBase, const float OldCurrent);
 
-	static bool IsModifierValid(const FAdaAttributeModifierSpec& Modifier);
 	static FAdaAttributeHandle MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute);
 
 protected:

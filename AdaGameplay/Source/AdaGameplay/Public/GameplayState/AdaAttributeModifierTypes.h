@@ -40,15 +40,34 @@ enum class EAdaAttributeModOpType : uint8
 };
 
 USTRUCT()
+struct FAdaAttributeModifierClampingParams
+{
+	GENERATED_BODY()
+
+public:
+	bool bActive = false;
+	bool bHasMinDelta = false;
+	bool bHasMaxDelta = false;
+	
+	float MinDelta = 0.0f;
+	float MaxDelta = 0.0f;
+};
+
+USTRUCT()
 struct ADAGAMEPLAY_API FAdaAttributeModifierSpec
 {
 	GENERATED_BODY()
 
 	friend struct FAdaAttributeModifier;
+	friend class UAdaGameplayStateComponent;
+	friend class UAdaAttributeFunctionLibrary;
 
 public:
 	void SetPeriodicData(uint8 InInterval, uint32 InDuration, bool bApplyOnAdd, bool bApplyOnRemoval);
 	void SetDurationData(uint32 InDuration);
+	void SetClampingParams(TOptional<float> MinDelta, TOptional<float> MaxDelta);
+	
+	bool ModifiesClamping() const;
 
 public:
 	EAdaAttributeModApplicationType ApplicationType = EAdaAttributeModApplicationType::Instant;
@@ -59,7 +78,9 @@ public:
 	
 	float ModifierValue = 0.0f;
 
+	// #TODO: Hide this and infer from application type, right now it's error-prone.
 	bool bAffectsBase = false;
+	
 	bool bRecalculateImmediately = false;
 
 private:
@@ -68,10 +89,9 @@ private:
 	
 	bool bShouldApplyOnRemoval = false;
 
-	// #TODO: Add support for changing clamping values.
+	FAdaAttributeModifierClampingParams ClampingParams;
 };
 
-// Modifiers are stored in different arrays based on their application type.
 // #TODO: Figure out how to break this data down so that we're not shoving lots of unnecessary stuff into one massive struct.
 USTRUCT()
 struct ADAGAMEPLAY_API FAdaAttributeModifier
@@ -86,6 +106,7 @@ public:
 
 	bool HasDuration() const;
 	bool HasExpired(const uint64& CurrentFrame) const;
+	bool ModifiesClamping() const;
 	
 	bool ShouldRecalculate();
 	bool CanApply(const uint64& CurrentFrame);
@@ -112,6 +133,8 @@ public:
 
 private:
 	// #TODO: Add TFunction for dynamic modifiers
+
+	FAdaAttributeModifierClampingParams ClampingParams;
 
 	uint64 StartFrame = 0;
 	uint64 LastApplicationFrame = 0;

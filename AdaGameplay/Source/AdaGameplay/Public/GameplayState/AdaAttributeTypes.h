@@ -20,13 +20,10 @@ struct ADAGAMEPLAY_API FAdaAttributeInitParams
 	float InitialValue = 0.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	float MaxValue = 0.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	float MinValue = 0.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bUsesClamping = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "bUsesClamping", EditConditionHides))
+	FVector2D InitialClampingValues = FVector2D::ZeroVector;
 };
 
 USTRUCT(BlueprintType)
@@ -42,8 +39,8 @@ public:
 	
 	FORCEINLINE float GetBaseValue() const { return BaseValue; };
 	FORCEINLINE float GetCurrentValue() const { return CurrentValue; };
-	FORCEINLINE float GetMaxValue() const { return MaxValue; };
-	FORCEINLINE float GetMinValue() const { return MinValue; };
+	FORCEINLINE float GetMaxValue(const bool bUseBase = false) const { return bUseBase ? BaseClampingValues.Y : CurrentClampingValues.Y; };
+	FORCEINLINE float GetMinValue(const bool bUseBase = false) const { return bUseBase ? BaseClampingValues.X : CurrentClampingValues.X; };
 	FORCEINLINE float GetGrowthRate() const { return GrowthRate; };
 	FORCEINLINE float GetModifierCount() const { return ActiveModifiers.Num(); };
 	FORCEINLINE float GetDependencyCount() const { return AttributeDependencies.Num(); };
@@ -55,6 +52,7 @@ public:
 	FAdaOnAttributeUpdated OnAttributeUpdated;
 	
 protected:
+	// An optional fallback value to revert this attribute to if desired.
 	UPROPERTY(BlueprintReadOnly)
 	float ResetValue = 0.0f;
 	
@@ -67,10 +65,10 @@ protected:
 	float CurrentValue = 0.0f;
 
 	UPROPERTY(BlueprintReadOnly)
-	float MaxValue = 0.0f;
+	FVector2D BaseClampingValues = FVector2D::ZeroVector;
 
 	UPROPERTY(BlueprintReadOnly)
-	float MinValue = 0.0f;
+	FVector2D CurrentClampingValues = FVector2D::ZeroVector;
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bUsesClamping = false;

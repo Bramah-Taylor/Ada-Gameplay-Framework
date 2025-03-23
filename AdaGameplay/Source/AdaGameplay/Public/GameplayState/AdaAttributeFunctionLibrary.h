@@ -19,4 +19,7 @@ class ADAGAMEPLAY_API UAdaAttributeFunctionLibrary : public UBlueprintFunctionLi
 public:
 	// Inhibit modification of an attribute.
 	static FAdaAttributeModifierHandle InhibitAttribute(UAdaGameplayStateComponent& StateComponent, const FGameplayTag AttributeTag);
+
+	static bool IsModifierValid(const FAdaAttributeModifierSpec& Modifier);
+	static bool IsModifierClampingValid(const FAdaAttributeModifierSpec& Modifier);
 };

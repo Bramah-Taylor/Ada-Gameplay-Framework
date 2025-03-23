@@ -5,6 +5,7 @@
 #include "GameFramework/AdaGameState.h"
 #include "GameplayState/AdaGameplayStateManager.h"
 #include "Debug/AdaAssertionMacros.h"
+#include "GameplayState/AdaAttributeFunctionLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAdaGameplayState);
 
@@ -228,7 +229,7 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 		return OutHandle;
 	}
 
-	if (!IsModifierValid(ModifierToApply))
+	if (!UAdaAttributeFunctionLibrary::IsModifierValid(ModifierToApply))
 	{
 		return OutHandle;
 	}
@@ -429,6 +430,14 @@ void UAdaGameplayStateComponent::ApplyImmediateModifier(FAdaAttribute& Attribute
 	// Get base value.
 	float BaseValue = Attribute.BaseValue;
 
+	if (ModifierToApply.ModifiesClamping())
+	{
+		A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(0), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
+		
+		Attribute.BaseClampingValues.X += ModifierToApply.ClampingParams.bHasMinDelta ? ModifierToApply.ClampingParams.MinDelta : 0.0f;
+		Attribute.BaseClampingValues.Y += ModifierToApply.ClampingParams.bHasMaxDelta ? ModifierToApply.ClampingParams.MaxDelta : 0.0f;
+	}
+
 	if (ModifierToApply.OperationType == EAdaAttributeModOpType::Additive ||ModifierToApply.OperationType == EAdaAttributeModOpType::PostAdditive)
 	{
 		BaseValue += ModifierToApply.ModifierValue;
@@ -445,12 +454,12 @@ void UAdaGameplayStateComponent::ApplyImmediateModifier(FAdaAttribute& Attribute
 	// Clamp base and current if required.
 	if (Attribute.bUsesClamping)
 	{
-		BaseValue = FMath::Clamp(BaseValue, Attribute.MinValue, Attribute.MaxValue);
+		BaseValue = FMath::Clamp(BaseValue, Attribute.BaseClampingValues.X, Attribute.BaseClampingValues.Y);
 
 		// Recalculate current value to use the clamped base value.
 		CurrentValue = Attribute.CurrentValue + BaseValue - Attribute.BaseValue;
 		
-		CurrentValue = FMath::Clamp(CurrentValue, Attribute.MinValue, Attribute.MaxValue);
+		CurrentValue = FMath::Clamp(CurrentValue, Attribute.CurrentClampingValues.X, Attribute.CurrentClampingValues.Y);
 	}
 
 	const float OldBase = Attribute.BaseValue;
@@ -468,6 +477,14 @@ void UAdaGameplayStateComponent::ApplyOverridingModifier(FAdaAttribute& Attribut
 {
 	Attribute.bIsOverridden = true;
 	Attribute.OverridingModifier = Modifier;
+
+	if (Modifier->ModifiesClamping())
+	{
+		A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(0), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
+		
+		Attribute.CurrentClampingValues.X += Modifier->ClampingParams.bHasMinDelta ? Modifier->ClampingParams.MinDelta : 0.0f;
+		Attribute.CurrentClampingValues.Y += Modifier->ClampingParams.bHasMaxDelta ? Modifier->ClampingParams.MaxDelta : 0.0f;
+	}
 }
 
 void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, const uint64& CurrentFrame)
@@ -489,6 +506,9 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 
 	if (!bWasOverridden)
 	{
+		// Reset clamping values prior to potential recalculation.
+		Attribute.CurrentClampingValues = Attribute.BaseClampingValues;
+		
 		// Calculation formula:
 		// ((BaseValue + Additive) * Multiply) + PostAdditive;
 		// Then the same for current, using base
@@ -520,6 +540,14 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 			if (!Modifier->CanApply(CurrentFrame))
 			{
 				continue;
+			}
+
+			if (Modifier->ModifiesClamping())
+			{
+				A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(0), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
+		
+				Attribute.CurrentClampingValues.X += Modifier->ClampingParams.bHasMinDelta ? Modifier->ClampingParams.MinDelta : 0.0f;
+				Attribute.CurrentClampingValues.Y += Modifier->ClampingParams.bHasMaxDelta ? Modifier->ClampingParams.MaxDelta : 0.0f;
 			}
 
 			float ModifierValue = Modifier->ModifierValue;
@@ -578,8 +606,8 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 	// Clamp base and current if required.
 	if (Attribute.bUsesClamping)
 	{
-		BaseValue = FMath::Clamp(BaseValue, Attribute.MinValue, Attribute.MaxValue);
-		CurrentValue = FMath::Clamp(CurrentValue, Attribute.MinValue, Attribute.MaxValue);
+		BaseValue = FMath::Clamp(BaseValue, Attribute.BaseClampingValues.X, Attribute.BaseClampingValues.Y);
+		CurrentValue = FMath::Clamp(CurrentValue, Attribute.CurrentClampingValues.X, Attribute.CurrentClampingValues.Y);
 	}
 
 	const float OldBase = Attribute.BaseValue;
@@ -651,36 +679,6 @@ void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute
 	{
 		Attribute.OnAttributeUpdated.Broadcast(Attribute.AttributeTag, Attribute.BaseValue, Attribute.CurrentValue, OldBase, OldCurrent);
 	}
-}
-
-bool UAdaGameplayStateComponent::IsModifierValid(const FAdaAttributeModifierSpec& Modifier)
-{
-	switch (Modifier.ApplicationType)
-	{
-		case EAdaAttributeModApplicationType::Instant:
-		{
-			return Modifier.bAffectsBase && Modifier.OperationType != EAdaAttributeModOpType::Multiply;
-		}
-		case EAdaAttributeModApplicationType::Duration:
-		{
-			return !Modifier.bAffectsBase;
-		}
-		case EAdaAttributeModApplicationType::Periodic:
-		{
-			return Modifier.bAffectsBase && Modifier.OperationType != EAdaAttributeModOpType::Multiply && Modifier.OperationType != EAdaAttributeModOpType::Override;
-		}
-		case EAdaAttributeModApplicationType::Ticking:
-		{
-			return Modifier.bAffectsBase && Modifier.OperationType != EAdaAttributeModOpType::Multiply && Modifier.OperationType != EAdaAttributeModOpType::Override;
-		}
-		case EAdaAttributeModApplicationType::Persistent:
-		{
-			return !Modifier.bAffectsBase;
-		}
-		default: break;
-	}
-
-	return false;
 }
 
 FAdaAttributeHandle UAdaGameplayStateComponent::MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute)

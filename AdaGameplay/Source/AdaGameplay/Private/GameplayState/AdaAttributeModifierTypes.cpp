@@ -25,8 +25,30 @@ void FAdaAttributeModifierSpec::SetDurationData(uint32 InDuration)
 	bRecalculateImmediately = true;
 }
 
+void FAdaAttributeModifierSpec::SetClampingParams(TOptional<float> MinDelta, TOptional<float> MaxDelta)
+{
+	if (MinDelta.IsSet())
+	{
+		ClampingParams.bActive = true;
+		ClampingParams.bHasMinDelta = true;
+		ClampingParams.MinDelta = MinDelta.GetValue();
+	}
+	if (MaxDelta.IsSet())
+	{
+		ClampingParams.bActive = true;
+		ClampingParams.bHasMaxDelta = true;
+		ClampingParams.MaxDelta = MaxDelta.GetValue();
+	}
+}
+
+bool FAdaAttributeModifierSpec::ModifiesClamping() const
+{
+	return ClampingParams.bActive;
+}
+
 FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const FAdaAttributeModifierSpec& ModifierSpec, const uint64& CurrentFrame)
 {
+	// #TODO: Most of this can be moved to init list
 	AffectedAttribute = Attribute;
 	
 	ApplicationType = ModifierSpec.ApplicationType;
@@ -41,6 +63,8 @@ FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const
 
 	bShouldApplyOnRemoval = ModifierSpec.bShouldApplyOnRemoval;
 	bShouldApplyOnAdd = ModifierSpec.bRecalculateImmediately;
+
+	ClampingParams = ModifierSpec.ClampingParams;
 
 	if (ApplicationType == EAdaAttributeModApplicationType::Periodic)
 	{
@@ -68,6 +92,11 @@ bool FAdaAttributeModifier::HasExpired(const uint64& CurrentFrame) const
 	}
 
 	return CurrentFrame >= StartFrame + Duration;
+}
+
+bool FAdaAttributeModifier::ModifiesClamping() const
+{
+	return ClampingParams.bActive;
 }
 
 bool FAdaAttributeModifier::ShouldRecalculate()

@@ -23,3 +23,71 @@ FAdaAttributeModifierHandle UAdaAttributeFunctionLibrary::InhibitAttribute(UAdaG
 
 	return StateComponent.ModifyAttribute(AttributeTag, Modifier);
 }
+
+bool UAdaAttributeFunctionLibrary::IsModifierValid(const FAdaAttributeModifierSpec& Modifier)
+{
+	bool bValidConfig = false;
+	switch (Modifier.ApplicationType)
+	{
+		case EAdaAttributeModApplicationType::Instant:
+		{
+			bValidConfig = Modifier.bAffectsBase && Modifier.OperationType != EAdaAttributeModOpType::Multiply;
+			break;
+		}
+		case EAdaAttributeModApplicationType::Duration:
+		{
+			bValidConfig = !Modifier.bAffectsBase;
+			break;
+		}
+		case EAdaAttributeModApplicationType::Periodic:
+		{
+			bValidConfig = Modifier.bAffectsBase && Modifier.OperationType != EAdaAttributeModOpType::Multiply && Modifier.OperationType != EAdaAttributeModOpType::Override;
+			break;
+		}
+		case EAdaAttributeModApplicationType::Ticking:
+		{
+			bValidConfig = Modifier.bAffectsBase && Modifier.OperationType != EAdaAttributeModOpType::Multiply && Modifier.OperationType != EAdaAttributeModOpType::Override;
+			break;
+		}
+		case EAdaAttributeModApplicationType::Persistent:
+		{
+			bValidConfig = !Modifier.bAffectsBase;
+			break;
+		}
+		default: break;
+	}
+
+	bValidConfig &= IsModifierClampingValid(Modifier);
+
+	return bValidConfig;
+}
+
+bool UAdaAttributeFunctionLibrary::IsModifierClampingValid(const FAdaAttributeModifierSpec& Modifier)
+{
+	switch (Modifier.ApplicationType)
+	{
+		case EAdaAttributeModApplicationType::Instant:
+		{
+			[[fallthrough]];
+		}
+		case EAdaAttributeModApplicationType::Duration:
+		{
+			return true;
+		}
+		case EAdaAttributeModApplicationType::Periodic:
+		{
+			[[fallthrough]];
+		}
+		case EAdaAttributeModApplicationType::Ticking:
+		{
+			return !Modifier.ModifiesClamping();
+		}
+		case EAdaAttributeModApplicationType::Persistent:
+		{
+			return true;
+		}
+		default: break;
+	}
+
+	return false;
+}
