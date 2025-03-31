@@ -13,9 +13,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogAdaAssertions, Error, All);
 		return RetVal; \
 	}
 
-#define A_ENSURE_MSG(InExpression, InFormat, ... ) UE_ENSURE_IMPL2(&, false, InExpression, InFormat, ##__VA_ARGS__)
+#define A_ENSURE_MSG(InExpression, InFormat, ... ) ensureMsgf(InExpression, InFormat, ##__VA_ARGS__)
 #define A_ENSURE_MSG_RET(InExpression, RetVal, InFormat, ... ) \
-	if (!UE_ENSURE_IMPL2(&, false, InExpression, InFormat, ##__VA_ARGS__)) \
+	if (!ensureMsgf(InExpression, InFormat, ##__VA_ARGS__)) \
 	{ \
 		return RetVal; \
 	}

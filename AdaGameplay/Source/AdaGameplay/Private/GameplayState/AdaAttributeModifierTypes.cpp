@@ -46,25 +46,20 @@ bool FAdaAttributeModifierSpec::ModifiesClamping() const
 	return ClampingParams.bActive;
 }
 
-FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const FAdaAttributeModifierSpec& ModifierSpec, const uint64& CurrentFrame)
+FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const FAdaAttributeModifierSpec& ModifierSpec, const uint64& CurrentFrame, const int32 NewId) :
+	AffectedAttribute(Attribute),
+	ApplicationType(ModifierSpec.ApplicationType),
+	CalculationType(ModifierSpec.CalculationType),
+	OperationType(ModifierSpec.OperationType),
+	bAffectsBase(ModifierSpec.bAffectsBase),
+	ModifierValue(ModifierSpec.ModifierValue),
+	ClampingParams(ModifierSpec.ClampingParams),
+	Interval(ModifierSpec.Interval),
+	Duration(ModifierSpec.Duration),
+	Identifier(NewId),
+	bShouldApplyOnAdd(ModifierSpec.bRecalculateImmediately),
+	bShouldApplyOnRemoval(ModifierSpec.bShouldApplyOnRemoval)
 {
-	// #TODO: Most of this can be moved to init list
-	AffectedAttribute = Attribute;
-	
-	ApplicationType = ModifierSpec.ApplicationType;
-	CalculationType = ModifierSpec.CalculationType;
-	OperationType = ModifierSpec.OperationType;
-
-	bAffectsBase = ModifierSpec.bAffectsBase;
-	ModifierValue = ModifierSpec.ModifierValue;
-	
-	Interval = ModifierSpec.Interval;
-	Duration = ModifierSpec.Duration;
-
-	bShouldApplyOnRemoval = ModifierSpec.bShouldApplyOnRemoval;
-	bShouldApplyOnAdd = ModifierSpec.bRecalculateImmediately;
-
-	ClampingParams = ModifierSpec.ClampingParams;
 
 	if (ApplicationType == EAdaAttributeModApplicationType::Periodic)
 	{
@@ -108,7 +103,7 @@ bool FAdaAttributeModifier::ShouldRecalculate()
 		return false;
 	}
 	
-	// #TODO: Implement.
+	// #TODO(Ada.Gameplay): Implement.
 	return false;
 }
 
@@ -165,17 +160,17 @@ float FAdaAttributeModifier::CalculateValue()
 		}
 		case EAdaAttributeModCalcType::SetByDelegate:
 		{
-			// #TODO: Implement.
+			// #TODO(Ada.Gameplay): Implement.
 			return ModifierValue;
 		}
 		case EAdaAttributeModCalcType::SetByEffect:
         {
-        	// #TODO: Implement.
+        	// #TODO(Ada.Gameplay): Implement.
         	return ModifierValue;
         }
 		case EAdaAttributeModCalcType::SetByData:
 		{
-			// #TODO: Implement.
+			// #TODO(Ada.Gameplay): Implement.
 			return ModifierValue;
 		}
 	}
@@ -196,6 +191,16 @@ void FAdaAttributeModifier::PostApply(const uint64& CurrentFrame)
 	}
 }
 
+FString FAdaAttributeModifier::ToString() const
+{
+	FString OutString;
+	OutString += TEXT("Application Type: ") + StaticEnum<EAdaAttributeModApplicationType>()->GetNameStringByValue((int64)ApplicationType);
+	OutString += TEXT("\nCalculation Type: ") + StaticEnum<EAdaAttributeModCalcType>()->GetNameStringByValue((int64)CalculationType);
+	OutString += TEXT("\nOperation Type: ") + StaticEnum<EAdaAttributeModOpType>()->GetNameStringByValue((int64)OperationType);
+
+	return OutString;
+}
+
 void FAdaAttributeModifier::SetModifyingAttribute(const FAdaAttribute& InAttribute)
 {
 	A_ENSURE_RET(CalculationType == EAdaAttributeModCalcType::SetByAttribute, void(0));
@@ -204,19 +209,26 @@ void FAdaAttributeModifier::SetModifyingAttribute(const FAdaAttribute& InAttribu
 	ModifierValue = InAttribute.GetCurrentValue();
 }
 
-FAdaAttributeModifierHandle::FAdaAttributeModifierHandle(UAdaGameplayStateComponent* Owner, EAdaAttributeModApplicationType Type, int32 NewIndex)
+FAdaAttributeModifierHandle::FAdaAttributeModifierHandle(UAdaGameplayStateComponent* Owner, const EAdaAttributeModApplicationType Type, const int32 NewIndex, const int32 NewId) :
+	OwningStateComponentWeak(Owner),
+	ApplicationType(Type),
+	Index(NewIndex),
+	Identifier(NewId)
 {
-	OwningStateComponentWeak = Owner;
-	ApplicationType = Type;
-	Index = NewIndex;
+	
 }
 
 bool FAdaAttributeModifierHandle::IsValid() const
 {
+	if (Identifier == INDEX_NONE)
+	{
+		return false;
+	}
+	
 	UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
 	A_VALIDATE_OBJ(OwningStateComponent, false);
 
-	if (OwningStateComponent->FindModifier(Index))
+	if (OwningStateComponent->FindModifierByIndex(Index))
 	{
 		return true;
 	}
@@ -237,7 +249,7 @@ FAdaAttributeModifier* FAdaAttributeModifierHandle::Get()
 	UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
 	A_VALIDATE_OBJ(OwningStateComponent, nullptr);
 
-	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifier(Index);
+	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifierByIndex(Index);
 	if (!ModifierOptional.IsSet())
 	{
 		return nullptr;
@@ -251,13 +263,19 @@ const FAdaAttributeModifier* FAdaAttributeModifierHandle::Get() const
 	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
 	A_VALIDATE_OBJ(OwningStateComponent, nullptr);
 
-	const TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifier(Index);
+	const TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifierByIndex(Index);
 	if (!ModifierOptional.IsSet())
 	{
 		return nullptr;
 	}
 
-	return &*ModifierOptional.GetValue();
+	const TSharedRef<FAdaAttributeModifier> ModifierRef = ModifierOptional.GetValue();
+	if (ModifierRef->GetIdentifier() != Identifier)
+	{
+		return nullptr;
+	}
+
+	return ModifierRef.ToSharedPtr().Get();
 }
 
 bool FAdaAttributeModifierHandle::Remove()

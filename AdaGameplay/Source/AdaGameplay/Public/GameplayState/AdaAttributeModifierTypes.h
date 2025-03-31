@@ -78,7 +78,7 @@ public:
 	
 	float ModifierValue = 0.0f;
 
-	// #TODO: Hide this and infer from application type, right now it's error-prone.
+	// #TODO(Ada.Gameplay): Hide this and infer from application type, right now it's error-prone.
 	bool bAffectsBase = false;
 	
 	bool bRecalculateImmediately = false;
@@ -92,7 +92,6 @@ private:
 	FAdaAttributeModifierClampingParams ClampingParams;
 };
 
-// #TODO: Figure out how to break this data down so that we're not shoving lots of unnecessary stuff into one massive struct.
 USTRUCT()
 struct ADAGAMEPLAY_API FAdaAttributeModifier
 {
@@ -102,25 +101,29 @@ struct ADAGAMEPLAY_API FAdaAttributeModifier
 
 public:
 	FAdaAttributeModifier() = default;
-	FAdaAttributeModifier(const FGameplayTag Attribute, const FAdaAttributeModifierSpec& ModifierSpec, const uint64& CurrentFrame);
+	FAdaAttributeModifier(const FGameplayTag Attribute, const FAdaAttributeModifierSpec& ModifierSpec, const uint64& CurrentFrame, const int32 NewId);
 
+	FORCEINLINE FGameplayTag GetAffectedAttribute() const { return AffectedAttribute; };
+	FORCEINLINE float GetValue() const { return ModifierValue; };
+	FORCEINLINE int32 GetIdentifier() const { return Identifier; };
+	
 	bool HasDuration() const;
 	bool HasExpired(const uint64& CurrentFrame) const;
 	bool ModifiesClamping() const;
 	
 	bool ShouldRecalculate();
 	bool CanApply(const uint64& CurrentFrame);
-	
+
 	float CalculateValue();
 	void SetValue(float NewValue);
 
 	void PostApply(const uint64& CurrentFrame);
+	
+	FString ToString() const;
 
 protected:
 	void SetModifyingAttribute(const FAdaAttribute& InAttribute);
 
-	// #TODO: Find a way of making these accessible to the Cog debug window without making them public.
-public:
 	FGameplayTag AffectedAttribute = FGameplayTag::EmptyTag;
 	FGameplayTag ModifyingAttribute = FGameplayTag::EmptyTag;
 	
@@ -132,7 +135,7 @@ public:
 	float ModifierValue = 0.0f;
 
 private:
-	// #TODO: Add TFunction for dynamic modifiers
+	// #TODO(Ada.Gameplay): Add TFunction for dynamic modifiers
 
 	FAdaAttributeModifierClampingParams ClampingParams;
 
@@ -140,6 +143,8 @@ private:
 	uint64 LastApplicationFrame = 0;
 	uint8 Interval = 0;
 	uint32 Duration = 0;
+
+	int32 Identifier = INDEX_NONE;
 
 	bool bShouldApplyOnAdd = false;
 	bool bHasAppliedOnAdd = false;
@@ -156,7 +161,7 @@ struct ADAGAMEPLAY_API FAdaAttributeModifierHandle
 
 public:
 	FAdaAttributeModifierHandle() = default;
-	FAdaAttributeModifierHandle(UAdaGameplayStateComponent* Owner, EAdaAttributeModApplicationType Type, int32 NewIndex);
+	FAdaAttributeModifierHandle(UAdaGameplayStateComponent* Owner, const EAdaAttributeModApplicationType Type, const int32 NewIndex, const int32 NewId);
 	
 	bool IsValid() const;
 	void Invalidate();
@@ -170,5 +175,7 @@ private:
 	TWeakObjectPtr<UAdaGameplayStateComponent> OwningStateComponentWeak = nullptr;
 
 	EAdaAttributeModApplicationType ApplicationType;
-	int32 Index = -1;
+	int32 Index = INDEX_NONE;
+	
+	int32 Identifier = INDEX_NONE;
 };

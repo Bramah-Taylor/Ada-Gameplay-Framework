@@ -40,7 +40,7 @@ public:
 	// Remove the modifier. Will cause a pending update on tick and won't reapply on removal.
 	bool RemoveModifier(FAdaAttributeModifierHandle& ModifierHandle);
 
-	// #TODO: Move to child class in game module
+	// #TODO(Ada.Gameplay): Move to child class in game module
 	FORCEINLINE const TArray<TSharedRef<FAdaAttribute>>& GetAllAttributes() const { return Attributes; };
 	FORCEINLINE const TSparseArray<TSharedRef<FAdaAttributeModifier>>& GetAllModifiers() const { return ActiveModifiers; };
 
@@ -54,8 +54,8 @@ protected:
 	const TSharedPtr<FAdaAttribute> FindAttribute_Internal(const FGameplayTag AttributeTag) const;
 	TOptional<TSharedRef<FAdaAttribute>> FindAttributeRef_Internal(const FGameplayTag AttributeTag);
 	
-	TOptional<TSharedRef<FAdaAttributeModifier>> FindModifier(int32 Index);
-	const TOptional<TSharedRef<FAdaAttributeModifier>> FindModifier(int32 Index) const;
+	TOptional<TSharedRef<FAdaAttributeModifier>> FindModifierByIndex(int32 Index);
+	const TOptional<TSharedRef<FAdaAttributeModifier>> FindModifierByIndex(int32 Index) const;
 
 	bool RemoveModifierByIndex(int32 Index);
 	bool RemoveModifier_Internal(TSharedRef<FAdaAttributeModifier>& Modifier, int32 Index);
@@ -69,13 +69,16 @@ protected:
 
 	void NotifyAttributeChanged(FAdaAttribute& Attribute, const float OldBase, const float OldCurrent);
 
+	int32 GetNextModifierId();
+
 	static FAdaAttributeHandle MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute);
 
 protected:
-	// #TODO: Reserve memory & define allocator?
+	// #TODO(Ada.Gameplay): Reserve memory & define allocator?
 	TArray<TSharedRef<FAdaAttribute>> Attributes;
 
 	TSparseArray<TSharedRef<FAdaAttributeModifier>> ActiveModifiers;
 
 	uint64 LatestFrame = 0;
+	int32 LatestModifierId = 0;
 };

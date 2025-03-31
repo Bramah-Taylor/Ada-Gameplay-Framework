@@ -243,8 +243,9 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 	}
 	else
 	{
+		const int32 ModifierId = GetNextModifierId();
 		// Create the modifier, but don't cache it yet as we may have extra setup to do first.
-		const TSharedRef<FAdaAttributeModifier>& ModifierRef = MakeShareable<FAdaAttributeModifier>(new FAdaAttributeModifier(AttributeTag, ModifierToApply, LatestFrame));
+		const TSharedRef<FAdaAttributeModifier>& ModifierRef = MakeShareable<FAdaAttributeModifier>(new FAdaAttributeModifier(AttributeTag, ModifierToApply, LatestFrame, ModifierId));
 		
 		FAdaAttributeModifier& Modifier = ModifierRef.Get();
 		int32 OutIndex = INDEX_NONE;
@@ -283,7 +284,7 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 		}
 
 		A_ENSURE(OutIndex != INDEX_NONE);
-		OutHandle = FAdaAttributeModifierHandle(this, ModifierToApply.ApplicationType, OutIndex);
+		OutHandle = FAdaAttributeModifierHandle(this, ModifierToApply.ApplicationType, OutIndex, ModifierId);
 	}
 
 	if (ModifierToApply.bRecalculateImmediately)
@@ -292,7 +293,7 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 	}
 	else
 	{
-		// #TODO: Figure out if it's actually safer to just recalculate immediately.
+		// #TODO(Ada.Gameplay): Figure out if it's actually safer to just recalculate immediately.
 		Attribute.bIsDirty = true;
 	}
 
@@ -301,7 +302,7 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 
 bool UAdaGameplayStateComponent::RemoveModifier(FAdaAttributeModifierHandle& ModifierHandle)
 {
-	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifier(ModifierHandle.Index);
+	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifierByIndex(ModifierHandle.Index);
 	if (!ModifierOptional.IsSet())
 	{
 		return false;
@@ -354,31 +355,29 @@ TOptional<TSharedRef<FAdaAttribute>> UAdaGameplayStateComponent::FindAttributeRe
 	return TOptional<TSharedRef<FAdaAttribute>>();
 }
 
-TOptional<TSharedRef<FAdaAttributeModifier>> UAdaGameplayStateComponent::FindModifier(int32 Index)
+TOptional<TSharedRef<FAdaAttributeModifier>> UAdaGameplayStateComponent::FindModifierByIndex(int32 Index)
 {
 	if (!ActiveModifiers.IsValidIndex(Index))
 	{
 		return TOptional<TSharedRef<FAdaAttributeModifier>>();
 	}
 	
-	// #TODO: Do some error checking in here to make sure we're actually fetching the right modifier.
 	return ActiveModifiers[Index];
 }
 
-const TOptional<TSharedRef<FAdaAttributeModifier>> UAdaGameplayStateComponent::FindModifier(int32 Index) const
+const TOptional<TSharedRef<FAdaAttributeModifier>> UAdaGameplayStateComponent::FindModifierByIndex(int32 Index) const
 {
 	if (!ActiveModifiers.IsValidIndex(Index))
 	{
 		return TOptional<TSharedRef<FAdaAttributeModifier>>();
 	}
 	
-	// #TODO: Do some error checking in here to make sure we're actually fetching the right modifier.
 	return ActiveModifiers[Index];
 }
 
 bool UAdaGameplayStateComponent::RemoveModifierByIndex(int32 Index)
 {
-	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifier(Index);
+	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifierByIndex(Index);
 	if (!ModifierOptional.IsSet())
 	{
 		return false;
@@ -659,7 +658,7 @@ void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute
 		}
 
 		// Find the modifier that uses this attribute and update the value.
-		TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifier(Index);
+		TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifierByIndex(Index);
 		if (!ModifierOptional.IsSet())
 		{
 			continue;
@@ -679,6 +678,17 @@ void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute
 	{
 		Attribute.OnAttributeUpdated.Broadcast(Attribute.AttributeTag, Attribute.BaseValue, Attribute.CurrentValue, OldBase, OldCurrent);
 	}
+}
+
+int32 UAdaGameplayStateComponent::GetNextModifierId()
+{
+	LatestModifierId++;
+	if (LatestModifierId == INDEX_NONE)
+	{
+		LatestModifierId = 0;
+	}
+
+	return LatestModifierId;
 }
 
 FAdaAttributeHandle UAdaGameplayStateComponent::MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute)
