@@ -293,7 +293,6 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 	}
 	else
 	{
-		// #TODO(Ada.Gameplay): Figure out if it's actually safer to just recalculate immediately.
 		Attribute.bIsDirty = true;
 	}
 

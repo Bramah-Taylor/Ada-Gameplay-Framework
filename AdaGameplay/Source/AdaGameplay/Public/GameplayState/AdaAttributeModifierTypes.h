@@ -68,6 +68,7 @@ public:
 	void SetClampingParams(TOptional<float> MinDelta, TOptional<float> MaxDelta);
 	
 	bool ModifiesClamping() const;
+	bool AffectsBaseValue() const;
 
 public:
 	EAdaAttributeModApplicationType ApplicationType = EAdaAttributeModApplicationType::Instant;
@@ -77,9 +78,6 @@ public:
 	FGameplayTag ModifyingAttribute = FGameplayTag::EmptyTag;
 	
 	float ModifierValue = 0.0f;
-
-	// #TODO(Ada.Gameplay): Hide this and infer from application type, right now it's error-prone.
-	bool bAffectsBase = false;
 	
 	bool bRecalculateImmediately = false;
 
@@ -111,7 +109,7 @@ public:
 	bool HasExpired(const uint64& CurrentFrame) const;
 	bool ModifiesClamping() const;
 	
-	bool ShouldRecalculate();
+	bool ShouldRecalculate() const;
 	bool CanApply(const uint64& CurrentFrame);
 
 	float CalculateValue();

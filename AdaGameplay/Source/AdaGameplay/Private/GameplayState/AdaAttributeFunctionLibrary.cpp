@@ -18,7 +18,6 @@ FAdaAttributeModifierHandle UAdaAttributeFunctionLibrary::InhibitAttribute(UAdaG
 	Modifier.ApplicationType = EAdaAttributeModApplicationType::Persistent;
 	Modifier.CalculationType = EAdaAttributeModCalcType::SetByCaller;
 	Modifier.OperationType = EAdaAttributeModOpType::Override;
-	Modifier.bAffectsBase = false;
 	Modifier.ModifierValue = FoundAttribute->GetCurrentValue();
 
 	return StateComponent.ModifyAttribute(AttributeTag, Modifier);
@@ -31,27 +30,27 @@ bool UAdaAttributeFunctionLibrary::IsModifierValid(const FAdaAttributeModifierSp
 	{
 		case EAdaAttributeModApplicationType::Instant:
 		{
-			bValidConfig = Modifier.bAffectsBase && Modifier.OperationType != EAdaAttributeModOpType::Multiply;
+			bValidConfig = Modifier.AffectsBaseValue() && Modifier.OperationType != EAdaAttributeModOpType::Multiply;
 			break;
 		}
 		case EAdaAttributeModApplicationType::Duration:
 		{
-			bValidConfig = !Modifier.bAffectsBase;
+			bValidConfig = !Modifier.AffectsBaseValue();
 			break;
 		}
 		case EAdaAttributeModApplicationType::Periodic:
 		{
-			bValidConfig = Modifier.bAffectsBase && Modifier.OperationType != EAdaAttributeModOpType::Multiply && Modifier.OperationType != EAdaAttributeModOpType::Override;
+			bValidConfig = Modifier.AffectsBaseValue() && Modifier.OperationType != EAdaAttributeModOpType::Multiply && Modifier.OperationType != EAdaAttributeModOpType::Override;
 			break;
 		}
 		case EAdaAttributeModApplicationType::Ticking:
 		{
-			bValidConfig = Modifier.bAffectsBase && Modifier.OperationType != EAdaAttributeModOpType::Multiply && Modifier.OperationType != EAdaAttributeModOpType::Override;
+			bValidConfig = Modifier.AffectsBaseValue() && Modifier.OperationType != EAdaAttributeModOpType::Multiply && Modifier.OperationType != EAdaAttributeModOpType::Override;
 			break;
 		}
 		case EAdaAttributeModApplicationType::Persistent:
 		{
-			bValidConfig = !Modifier.bAffectsBase;
+			bValidConfig = !Modifier.AffectsBaseValue();
 			break;
 		}
 		default: break;

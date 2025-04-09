@@ -46,12 +46,17 @@ bool FAdaAttributeModifierSpec::ModifiesClamping() const
 	return ClampingParams.bActive;
 }
 
+bool FAdaAttributeModifierSpec::AffectsBaseValue() const
+{
+	return ApplicationType != EAdaAttributeModApplicationType::Duration && ApplicationType != EAdaAttributeModApplicationType::Persistent;
+}
+
 FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const FAdaAttributeModifierSpec& ModifierSpec, const uint64& CurrentFrame, const int32 NewId) :
 	AffectedAttribute(Attribute),
 	ApplicationType(ModifierSpec.ApplicationType),
 	CalculationType(ModifierSpec.CalculationType),
 	OperationType(ModifierSpec.OperationType),
-	bAffectsBase(ModifierSpec.bAffectsBase),
+	bAffectsBase(ModifierSpec.AffectsBaseValue()),
 	ModifierValue(ModifierSpec.ModifierValue),
 	ClampingParams(ModifierSpec.ClampingParams),
 	Interval(ModifierSpec.Interval),
@@ -94,16 +99,39 @@ bool FAdaAttributeModifier::ModifiesClamping() const
 	return ClampingParams.bActive;
 }
 
-bool FAdaAttributeModifier::ShouldRecalculate()
+bool FAdaAttributeModifier::ShouldRecalculate() const
 {
-	if (CalculationType == EAdaAttributeModCalcType::SetByCaller
-		|| CalculationType == EAdaAttributeModCalcType::SetExternally
-		|| CalculationType == EAdaAttributeModCalcType::SetByAttribute)
+	switch (CalculationType)
 	{
-		return false;
+		case EAdaAttributeModCalcType::SetByCaller:
+		{
+			[[fallthrough]];
+		}
+		case EAdaAttributeModCalcType::SetExternally:
+		{
+			[[fallthrough]];
+		}
+		case EAdaAttributeModCalcType::SetByAttribute:
+		{
+			return false;
+		}
+		case EAdaAttributeModCalcType::SetByEffect:
+		{
+			// #TODO: Will eventually query the effect here
+			return false;
+		}
+		case EAdaAttributeModCalcType::SetByDelegate:
+		{
+			// #TODO: SetByDelegate requires a delegate to query here - we'll implement two separate delegates for querying and calculating.
+		}
+		case EAdaAttributeModCalcType::SetByData:
+		{
+			// Always re-evaluate curve-based modifiers.
+			return true;
+		}
+		default: break;
 	}
 	
-	// #TODO(Ada.Gameplay): Implement.
 	return false;
 }
 
