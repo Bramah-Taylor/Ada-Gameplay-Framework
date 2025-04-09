@@ -25,11 +25,11 @@ public:
 
 	void FixedTick(const uint64& CurrentFrame);
 
-	FAdaAttributeHandle AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams);
+	FAdaAttributePtr AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams);
 	void RemoveAttribute(const FGameplayTag AttributeTag);
 
-	FAdaAttributeHandle FindAttribute(const FGameplayTag AttributeTag);
-	void InvalidateHandle(FAdaAttributeHandle& InHandle);
+	FAdaAttributePtr FindAttribute(const FGameplayTag AttributeTag) const;
+	void InvalidateHandle(FAdaAttributePtr& InHandle) const;
 
 	bool HasAttribute(const FGameplayTag AttributeTag) const;
 
@@ -71,7 +71,7 @@ protected:
 
 	int32 GetNextModifierId();
 
-	static FAdaAttributeHandle MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute);
+	FAdaAttributePtr MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute) const;
 
 protected:
 	// #TODO(Ada.Gameplay): Reserve memory & define allocator?

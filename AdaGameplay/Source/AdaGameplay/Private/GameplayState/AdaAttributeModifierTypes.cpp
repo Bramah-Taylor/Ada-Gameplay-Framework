@@ -239,7 +239,6 @@ void FAdaAttributeModifier::SetModifyingAttribute(const FAdaAttribute& InAttribu
 
 FAdaAttributeModifierHandle::FAdaAttributeModifierHandle(UAdaGameplayStateComponent* Owner, const EAdaAttributeModApplicationType Type, const int32 NewIndex, const int32 NewId) :
 	OwningStateComponentWeak(Owner),
-	ApplicationType(Type),
 	Index(NewIndex),
 	Identifier(NewId)
 {
@@ -267,9 +266,8 @@ bool FAdaAttributeModifierHandle::IsValid() const
 void FAdaAttributeModifierHandle::Invalidate()
 {
 	OwningStateComponentWeak = nullptr;
-
-	ApplicationType = EAdaAttributeModApplicationType::Instant;
-	Index = -1;
+	Index = INDEX_NONE;
+	Identifier = INDEX_NONE;
 }
 
 FAdaAttributeModifier* FAdaAttributeModifierHandle::Get()

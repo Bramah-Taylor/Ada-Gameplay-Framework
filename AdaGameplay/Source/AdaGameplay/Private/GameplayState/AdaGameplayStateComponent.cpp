@@ -128,12 +128,12 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentFrame)
 	}
 }
 
-FAdaAttributeHandle UAdaGameplayStateComponent::AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams)
+FAdaAttributePtr UAdaGameplayStateComponent::AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams)
 {
 	if (FindAttribute_Internal(AttributeTag))
 	{
 		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Already added attribute %s to component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
-		return FAdaAttributeHandle();
+		return FAdaAttributePtr();
 	}
 
 	const TSharedRef<FAdaAttribute>& NewAttribute = Attributes.Add_GetRef(MakeShareable<FAdaAttribute>(new FAdaAttribute(AttributeTag, InitParams)));
@@ -159,7 +159,7 @@ void UAdaGameplayStateComponent::RemoveAttribute(const FGameplayTag AttributeTag
 	Attributes.Remove(FoundAttribute);
 }
 
-FAdaAttributeHandle UAdaGameplayStateComponent::FindAttribute(const FGameplayTag AttributeTag)
+FAdaAttributePtr UAdaGameplayStateComponent::FindAttribute(const FGameplayTag AttributeTag) const
 {
 	for (TSharedRef<FAdaAttribute> Attribute : Attributes)
 	{
@@ -170,10 +170,10 @@ FAdaAttributeHandle UAdaGameplayStateComponent::FindAttribute(const FGameplayTag
 	}
 
 	UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
-	return FAdaAttributeHandle();
+	return FAdaAttributePtr();
 }
 
-void UAdaGameplayStateComponent::InvalidateHandle(FAdaAttributeHandle& InHandle)
+void UAdaGameplayStateComponent::InvalidateHandle(FAdaAttributePtr& InHandle) const
 {
 	if (!InHandle.IsValid())
 	{
@@ -690,7 +690,7 @@ int32 UAdaGameplayStateComponent::GetNextModifierId()
 	return LatestModifierId;
 }
 
-FAdaAttributeHandle UAdaGameplayStateComponent::MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute)
+FAdaAttributePtr UAdaGameplayStateComponent::MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute) const
 {
-	return FAdaAttributeHandle(InAttribute);
+	return FAdaAttributePtr(InAttribute, this);
 }

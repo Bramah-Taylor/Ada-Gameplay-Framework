@@ -22,12 +22,12 @@ enum class EAdaAttributeModApplicationType : uint8
 UENUM()
 enum class EAdaAttributeModCalcType : uint8
 {
-	SetByCaller,		// Static modifier, doesn't change
-	SetByDelegate,
-	SetByEffect,
-	SetByData,
-	SetByAttribute,
-	SetExternally		// Dynamic modifier, but the calculation is handled by the caller
+	SetByCaller			UMETA(Tooltip = "Static modifier set on creation of the modifier"),
+	SetByDelegate		UMETA(Tooltip = "Dynamic modifier, recalculated based on the provided delegate"),
+	SetByEffect			UMETA(Tooltip = "Dynamic modifier, recalculated based on the owning gameplay effect"),
+	SetByData			UMETA(Tooltip = "Dynamic modifier, recalculated based on the provided float curve"),
+	SetByAttribute		UMETA(Tooltip = "Dynamic modifier, recalculated based on the modifying attribute"),
+	SetExternally		UMETA(Tooltip = "Dynamic modifier, set externally by some other system")
 };
 
 UENUM()
@@ -53,6 +53,8 @@ public:
 	float MaxDelta = 0.0f;
 };
 
+// Struct defining initialization params for an attribute modifier.
+// This limits exposure to the actual live data used by the struct and hands full control of initialization over to the attribute system.
 USTRUCT()
 struct ADAGAMEPLAY_API FAdaAttributeModifierSpec
 {
@@ -90,6 +92,10 @@ private:
 	FAdaAttributeModifierClampingParams ClampingParams;
 };
 
+// Struct defining a single modification to a single attribute.
+// This is a generic class that currently contains all the relevant data for all potential permutations of modifiers.
+// Some of this data may be pulled out of this struct at a later point, should it prove to be beneficial to do so.
+// For now, we just provide everything here and avoid any complexity that would come from a polymorphic implementation.
 USTRUCT()
 struct ADAGAMEPLAY_API FAdaAttributeModifier
 {
@@ -137,19 +143,40 @@ private:
 
 	FAdaAttributeModifierClampingParams ClampingParams;
 
+	// The frame on which this modifier was first applied.
+	// Relevant to duration-based modifiers.
 	uint64 StartFrame = 0;
+
+	// The most recent frame on which this modifier was applied.
+	// Relevant to tick-based modifiers.
 	uint64 LastApplicationFrame = 0;
+
+	// The interval, in ticks, for when we should apply this modifier.
+	// Relevant to tick-based modifiers.
 	uint8 Interval = 0;
+
+	// How many ticks we should apply this modifier for.
+	// Relevant to duration-based modifiers.
 	uint32 Duration = 0;
 
+	// The identifier for this modifier. Used to check handle validity when other systems wish to access this modifier.
 	int32 Identifier = INDEX_NONE;
 
+	// Whether this modifier should apply when it's first added.
+	// Relevant to tick-based modifiers.
 	bool bShouldApplyOnAdd = false;
+
+	// Whether this modifier was applied when it was added.
+	// Relevant to tick-based modifiers.
 	bool bHasAppliedOnAdd = false;
-	
+
+	// Whether this modifier should apply when it's expired or removed.
+	// Relevant to tick-based modifiers.
 	bool bShouldApplyOnRemoval = false;
 };
 
+// Handle to an active attribute modifier.
+// We create a modifier handle when modifying the given attribute; this modifier can then only be accessed externally via the generated handle.
 USTRUCT()
 struct ADAGAMEPLAY_API FAdaAttributeModifierHandle
 {
@@ -170,10 +197,13 @@ public:
 	bool Remove();
 	
 private:
+	// The component that owns this modifier when it's valid.
 	TWeakObjectPtr<UAdaGameplayStateComponent> OwningStateComponentWeak = nullptr;
 
-	EAdaAttributeModApplicationType ApplicationType;
+	// The index in the owning component's modifier array for this modifier, when it's valid.
 	int32 Index = INDEX_NONE;
-	
+
+	// The identifier assigned to this modifier.
+	// We use this to ensure validity of accessed modifiers when accessing by index.
 	int32 Identifier = INDEX_NONE;
 };
