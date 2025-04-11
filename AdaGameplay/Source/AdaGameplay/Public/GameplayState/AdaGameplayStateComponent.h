@@ -19,25 +19,48 @@ class ADAGAMEPLAY_API UAdaGameplayStateComponent : public UActorComponent
 
 	friend struct FAdaAttributeModifierHandle;
 	friend class UAdaAttributeFunctionLibrary;
+	friend class UAdaGameplayStateManager;
 
 public:	
 	UAdaGameplayStateComponent();
 
-	void FixedTick(const uint64& CurrentFrame);
-
+	/// @brief	Add an attribute to this component with some initial data.
+	/// @param	AttributeTag	The attribute we want to add.
+	/// @param	InitParams		Parameters for setting the initial state of this attribute.
+	/// @return A pointer to the attribute.
+	/// @note	The returned pointer will be null if this attribute already exists on the component.
 	FAdaAttributePtr AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams);
+
+	/// @brief	Remove the provided attribute from this component.
+	/// @param	AttributeTag	The attribute to remove.
+	/// @warning This remains untested. Use at your own risk.
 	void RemoveAttribute(const FGameplayTag AttributeTag);
 
+	/// @brief Find the given attribute on this component.
+	/// @param	AttributeTag	The attribute to find.
+	/// @return A pointer to the attribute. Will be null if the attribute is not found.
 	FAdaAttributePtr FindAttribute(const FGameplayTag AttributeTag) const;
-	void InvalidateHandle(FAdaAttributePtr& InHandle) const;
 
+	/// @brief	Query if an attribute exists on this component.
 	bool HasAttribute(const FGameplayTag AttributeTag) const;
 
+	/// @brief	Get a delegate that broadcasts whenever the provided attribute is updated.
+	/// @param	AttributeTag	The attribute we want to listen to changes for.
+	/// @return A delegate to subscribe to for changes to this attribute.
+	/// @note	The returned delegate will be null if the attribute is not found.
 	FAdaOnAttributeUpdated* GetDelegateForAttribute(const FGameplayTag AttributeTag);
 
+	/// @brief	Modify the given attribute using the provided modifier spec.
+	///			This function will produce an attribute modifier, which this component manages internally based on the provided spec.
+	/// @param	AttributeTag	The attribute we want to modify.
+	/// @param	ModifierToApply	The modifier spec to apply as a modifier to this attribute.
+	/// @return	Handle to the modifier to the affected attribute.
+	/// @note	The handle will be invalid if the modifier failed to apply.
 	FAdaAttributeModifierHandle ModifyAttribute(const FGameplayTag AttributeTag, const FAdaAttributeModifierSpec& ModifierToApply);
 
-	// Remove the modifier. Will cause a pending update on tick and won't reapply on removal.
+	/// @brief	Remove the modifier. Will cause a pending update on tick and won't reapply on removal.
+	/// @param	ModifierHandle	Handle to the modifier we wish to remove.
+	/// @return Whether the modifier was removed successfully.
 	bool RemoveModifier(FAdaAttributeModifierHandle& ModifierHandle);
 
 	// #TODO(Ada.Gameplay): Move to child class in game module
@@ -49,29 +72,48 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	// End UActorComponent overrides.
-	
+
+	void FixedTick(const uint64& CurrentFrame);
+
+	// Utility functions for finding attributes on this component.
 	TSharedPtr<FAdaAttribute> FindAttribute_Internal(const FGameplayTag AttributeTag);
 	const TSharedPtr<FAdaAttribute> FindAttribute_Internal(const FGameplayTag AttributeTag) const;
+
+	// Specific utility function for finding an attribute when we need to use the actual shared ref instead of a pointer.
 	TOptional<TSharedRef<FAdaAttribute>> FindAttributeRef_Internal(const FGameplayTag AttributeTag);
-	
+
+	// Utility functions for finding attribute modifiers by their array index.
 	TOptional<TSharedRef<FAdaAttributeModifier>> FindModifierByIndex(int32 Index);
 	const TOptional<TSharedRef<FAdaAttributeModifier>> FindModifierByIndex(int32 Index) const;
 
+	// Utility function for removing a modifier we know the index of.
 	bool RemoveModifierByIndex(int32 Index);
+
+	// Remove the specified modifier from all references on this component. That includes the modifier array,
+	// any references to this modifier on attributes, and any attribute dependency references.
 	bool RemoveModifier_Internal(TSharedRef<FAdaAttributeModifier>& Modifier, int32 Index);
 
+	// Immediately apply an instant, permanent modifier to this attribute.
 	void ApplyImmediateModifier(FAdaAttribute& Attribute, const FAdaAttributeModifierSpec& ModifierToApply);
+
+	// Apply a modifier that overrides the given attribute.
 	void ApplyOverridingModifier(FAdaAttribute& Attribute, const TSharedRef<FAdaAttributeModifier>& Modifier);
 
+	// Recalculate the value of an attribute from its modifiers.
 	void RecalculateAttribute(FAdaAttribute& Attribute, const uint64& CurrentFrame);
-	
+
+	// Check if attribute A depends on attribute B. Used to prevent circular dependencies.
 	bool DoesAttributeDependOnOther(const FGameplayTag AttributeTag, const FGameplayTag OtherAttributeTag) const;
 
+	// Let attributes, effects and delegate subscribers know an attribute's value has changed.
 	void NotifyAttributeChanged(FAdaAttribute& Attribute, const float OldBase, const float OldCurrent);
 
+	// Get an identifier for a new modifier.
+	// Designed to overflow and avoid the error case of INDEX_NONE.
 	int32 GetNextModifierId();
 
-	FAdaAttributePtr MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute) const;
+	// Make a shareable pointer to an attribute on this component.
+	FAdaAttributePtr MakeAttributePtr(const TSharedRef<FAdaAttribute>& InAttribute) const;
 
 protected:
 	// #TODO(Ada.Gameplay): Reserve memory & define allocator?

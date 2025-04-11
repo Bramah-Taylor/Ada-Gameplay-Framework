@@ -67,41 +67,56 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentFrame)
 		TSharedRef<FAdaAttributeModifier> ModifierRef = *It;
 		FAdaAttributeModifier& Modifier = ModifierRef.Get();
 
-		if (Modifier.ApplicationType != EAdaAttributeModApplicationType::Persistent)
+		if (!Modifier.CanApply(CurrentFrame))
 		{
-			if (!Modifier.CanApply(CurrentFrame))
-			{
-				continue;
-			}
+			continue;
+		}
 
-			TSharedPtr<FAdaAttribute> FoundAttribute = FindAttribute_Internal(Modifier.AffectedAttribute);
-			if (!FoundAttribute.IsValid())
+		TSharedPtr<FAdaAttribute> FoundAttribute = FindAttribute_Internal(Modifier.AffectedAttribute);
+		if (!FoundAttribute.IsValid())
+		{
+			UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Invalid periodic modifier for attribute %s"), __FUNCTION__,
+			       *Modifier.AffectedAttribute.ToString());
+			ExpiredModifiers.Add({ModifierRef, Index});
+			continue;
+		}
+
+		bool bTryRecalculate = true;
+		if (Modifier.HasExpired(CurrentFrame))
+		{
+			if (Modifier.bShouldApplyOnRemoval)
 			{
-				UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Invalid periodic modifier for attribute %s"), __FUNCTION__, *Modifier.AffectedAttribute.ToString());
+				PostTick_ExpiredModifiers.Add({ModifierRef, Index});
+			}
+			else
+			{
 				ExpiredModifiers.Add({ModifierRef, Index});
-				continue;
+				bTryRecalculate = false;
 			}
+		}
 
-			bool bTryRecalculate = true;
-			if (Modifier.HasExpired(CurrentFrame))
-			{
-				if (Modifier.bShouldApplyOnRemoval)
-				{
-					PostTick_ExpiredModifiers.Add({ModifierRef, Index});
-				}
-				else
-				{
-					ExpiredModifiers.Add({ModifierRef, Index});
-					bTryRecalculate = false;
-				}
-			}
+		// Update dynamic modifiers.
+		bool bValueChanged = false;
+		if (bTryRecalculate && Modifier.ShouldRecalculate())
+		{
+			const float OldValue = Modifier.GetValue();
+			const float NewValue = Modifier.CalculateValue();
 
-			// Update dynamic modifiers.
-			if (bTryRecalculate && Modifier.ShouldRecalculate())
-			{
-				Modifier.CalculateValue();
-			}
+			bValueChanged = !FMath::IsNearlyEqual(OldValue, NewValue);
+		}
 
+		bool bMarkAttributeDirty = false;
+		if (Modifier.ApplicationType == EAdaAttributeModApplicationType::Persistent)
+		{
+			bMarkAttributeDirty = bValueChanged;
+		}
+		else
+		{
+			bMarkAttributeDirty = true;
+		}
+
+		if (bMarkAttributeDirty)
+		{
 			FAdaAttribute& Attribute = *FoundAttribute;
 			Attribute.bIsDirty = true;
 		}
@@ -138,7 +153,7 @@ FAdaAttributePtr UAdaGameplayStateComponent::AddAttribute(const FGameplayTag Att
 
 	const TSharedRef<FAdaAttribute>& NewAttribute = Attributes.Add_GetRef(MakeShareable<FAdaAttribute>(new FAdaAttribute(AttributeTag, InitParams)));
 
-	return MakeAttributeHandle(NewAttribute);
+	return MakeAttributePtr(NewAttribute);
 }
 
 void UAdaGameplayStateComponent::RemoveAttribute(const FGameplayTag AttributeTag)
@@ -165,29 +180,12 @@ FAdaAttributePtr UAdaGameplayStateComponent::FindAttribute(const FGameplayTag At
 	{
 		if (Attribute.Get().AttributeTag == AttributeTag)
 		{
-			return MakeAttributeHandle(Attribute);
+			return MakeAttributePtr(Attribute);
 		}
 	}
 
 	UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
 	return FAdaAttributePtr();
-}
-
-void UAdaGameplayStateComponent::InvalidateHandle(FAdaAttributePtr& InHandle) const
-{
-	if (!InHandle.IsValid())
-	{
-		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Tried to invalidate invalid attribute handle!"), __FUNCTION__);
-		return;
-	}
-	
-	if (FindAttribute_Internal(InHandle.AttributeTag))
-	{
-		InHandle.Invalidate();
-		return;
-	}
-
-	UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *InHandle.AttributeTag.ToString(), *GetNameSafe(this));
 }
 
 bool UAdaGameplayStateComponent::HasAttribute(const FGameplayTag AttributeTag) const
@@ -690,7 +688,7 @@ int32 UAdaGameplayStateComponent::GetNextModifierId()
 	return LatestModifierId;
 }
 
-FAdaAttributePtr UAdaGameplayStateComponent::MakeAttributeHandle(const TSharedRef<FAdaAttribute>& InAttribute) const
+FAdaAttributePtr UAdaGameplayStateComponent::MakeAttributePtr(const TSharedRef<FAdaAttribute>& InAttribute) const
 {
 	return FAdaAttributePtr(InAttribute, this);
 }

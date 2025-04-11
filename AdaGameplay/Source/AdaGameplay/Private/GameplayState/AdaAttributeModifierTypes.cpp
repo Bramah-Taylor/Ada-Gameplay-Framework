@@ -41,6 +41,11 @@ void FAdaAttributeModifierSpec::SetClampingParams(TOptional<float> MinDelta, TOp
 	}
 }
 
+void FAdaAttributeModifierSpec::SetDelegate(const FAdaAttributeModifierDelegate& Delegate)
+{
+	ModifierDelegate = Delegate;
+}
+
 bool FAdaAttributeModifierSpec::ModifiesClamping() const
 {
 	return ClampingParams.bActive;
@@ -58,6 +63,7 @@ FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const
 	OperationType(ModifierSpec.OperationType),
 	bAffectsBase(ModifierSpec.AffectsBaseValue()),
 	ModifierValue(ModifierSpec.ModifierValue),
+	ModifierDelegate(ModifierSpec.ModifierDelegate),
 	ClampingParams(ModifierSpec.ClampingParams),
 	Interval(ModifierSpec.Interval),
 	Duration(ModifierSpec.Duration),
@@ -65,7 +71,6 @@ FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const
 	bShouldApplyOnAdd(ModifierSpec.bRecalculateImmediately),
 	bShouldApplyOnRemoval(ModifierSpec.bShouldApplyOnRemoval)
 {
-
 	if (ApplicationType == EAdaAttributeModApplicationType::Periodic)
 	{
 		LastApplicationFrame = CurrentFrame;
@@ -122,7 +127,8 @@ bool FAdaAttributeModifier::ShouldRecalculate() const
 		}
 		case EAdaAttributeModCalcType::SetByDelegate:
 		{
-			// #TODO: SetByDelegate requires a delegate to query here - we'll implement two separate delegates for querying and calculating.
+			A_ENSURE_RET(ModifierDelegate.bIsSet, false);
+			return ModifierDelegate.ShouldRecalculateModifierFunc(AffectedAttribute);
 		}
 		case EAdaAttributeModCalcType::SetByData:
 		{
@@ -188,7 +194,8 @@ float FAdaAttributeModifier::CalculateValue()
 		}
 		case EAdaAttributeModCalcType::SetByDelegate:
 		{
-			// #TODO(Ada.Gameplay): Implement.
+			A_ENSURE_RET(ModifierDelegate.bIsSet, false);
+			ModifierValue = ModifierDelegate.RecalculateModifierFunc(AffectedAttribute);
 			return ModifierValue;
 		}
 		case EAdaAttributeModCalcType::SetByEffect:

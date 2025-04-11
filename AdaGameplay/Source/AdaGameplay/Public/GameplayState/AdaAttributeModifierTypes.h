@@ -53,6 +53,20 @@ public:
 	float MaxDelta = 0.0f;
 };
 
+USTRUCT()
+struct ADAGAMEPLAY_API FAdaAttributeModifierDelegate
+{
+	GENERATED_BODY()
+
+public:
+	bool bIsSet = false;
+
+	TFunction<bool(const FGameplayTag)> ShouldRecalculateModifierFunc;
+	TFunction<float(const FGameplayTag)> RecalculateModifierFunc;
+
+	TWeakObjectPtr<UObject> InvokingObject = nullptr;
+};
+
 // Struct defining initialization params for an attribute modifier.
 // This limits exposure to the actual live data used by the struct and hands full control of initialization over to the attribute system.
 USTRUCT()
@@ -68,6 +82,7 @@ public:
 	void SetPeriodicData(uint8 InInterval, uint32 InDuration, bool bApplyOnAdd, bool bApplyOnRemoval);
 	void SetDurationData(uint32 InDuration);
 	void SetClampingParams(TOptional<float> MinDelta, TOptional<float> MaxDelta);
+	void SetDelegate(const FAdaAttributeModifierDelegate& Delegate);
 	
 	bool ModifiesClamping() const;
 	bool AffectsBaseValue() const;
@@ -90,6 +105,7 @@ private:
 	bool bShouldApplyOnRemoval = false;
 
 	FAdaAttributeModifierClampingParams ClampingParams;
+	FAdaAttributeModifierDelegate ModifierDelegate;
 };
 
 // Struct defining a single modification to a single attribute.
@@ -139,8 +155,10 @@ protected:
 	float ModifierValue = 0.0f;
 
 private:
-	// #TODO(Ada.Gameplay): Add TFunction for dynamic modifiers
+	// Struct for holding params for optional set by delegate recalculation.
+	FAdaAttributeModifierDelegate ModifierDelegate;
 
+	// Struct holding params for optional clamping modification.
 	FAdaAttributeModifierClampingParams ClampingParams;
 
 	// The frame on which this modifier was first applied.

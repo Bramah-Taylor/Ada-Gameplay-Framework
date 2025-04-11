@@ -58,6 +58,15 @@ bool UAdaAttributeFunctionLibrary::IsModifierValid(const FAdaAttributeModifierSp
 
 	bValidConfig &= IsModifierClampingValid(Modifier);
 
+	if (Modifier.CalculationType == EAdaAttributeModCalcType::SetByDelegate)
+	{
+		bValidConfig &= Modifier.ModifierDelegate.bIsSet;
+	}
+	else
+	{
+		bValidConfig &= !Modifier.ModifierDelegate.bIsSet;
+	}
+
 	return bValidConfig;
 }
 
