@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "AdaGameplayEffect.generated.h"
+#include "AdaStatusEffect.generated.h"
 
 UCLASS()
-class ADAGAMEPLAY_API UAdaGameplayEffect : public UObject
+class ADAGAMEPLAY_API UAdaStatusEffect : public UObject
 {
 	GENERATED_BODY()
 	

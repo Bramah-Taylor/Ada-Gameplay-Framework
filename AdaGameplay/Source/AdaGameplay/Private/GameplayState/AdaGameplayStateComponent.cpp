@@ -19,13 +19,13 @@ void UAdaGameplayStateComponent::BeginPlay()
 	Super::BeginPlay();
 
 	const UWorld* const World = GetWorld();
-	A_VALIDATE_OBJ(World, void(0));
+	A_ENSURE_RET(World, void(0));
 
 	const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
-	A_VALIDATE_OBJ(GameState, void(0));
+	A_ENSURE_RET(GameState, void(0));
 
 	UAdaGameplayStateManager* StateManager = GameState->GetGameplayStateManager();
-	A_VALIDATE_OBJ(StateManager, void(0));
+	A_ENSURE_RET(StateManager, void(0));
 
 	StateManager->RegisterStateComponent(this);
 }
@@ -38,18 +38,18 @@ void UAdaGameplayStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReaso
 	};
 
 	const UWorld* const World = GetWorld();
-	A_VALIDATE_OBJ(World, void(0));
+	A_ENSURE_RET(World, void(0));
 
 	const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
-	A_VALIDATE_OBJ(GameState, void(0));
+	A_ENSURE_RET(GameState, void(0));
 
 	UAdaGameplayStateManager* StateManager = GameState->GetGameplayStateManager();
-	A_VALIDATE_OBJ(StateManager, void(0));
+	A_ENSURE_RET(StateManager, void(0));
 
 	StateManager->UnregisterStateComponent(this);
 }
 
-void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentFrame)
+void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentTick)
 {
 	const UWorld* const World = GetWorld();
 	A_VALIDATE_OBJ(World, void(0));
@@ -57,8 +57,8 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentFrame)
 	TArray<TPair<TSharedRef<FAdaAttributeModifier>, uint32>> ExpiredModifiers;
 	TArray<TPair<TSharedRef<FAdaAttributeModifier>, uint32>> PostTick_ExpiredModifiers;
 
-	// Maintain internal frame reference.
-	LatestFrame = CurrentFrame;
+	// Maintain internal tick reference.
+	LatestTick = CurrentTick;
 	
 	for (auto It = ActiveModifiers.CreateIterator(); It; ++It)
 	{
@@ -67,7 +67,7 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentFrame)
 		TSharedRef<FAdaAttributeModifier> ModifierRef = *It;
 		FAdaAttributeModifier& Modifier = ModifierRef.Get();
 
-		if (!Modifier.CanApply(CurrentFrame))
+		if (!Modifier.CanApply(CurrentTick))
 		{
 			continue;
 		}
@@ -82,7 +82,7 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentFrame)
 		}
 
 		bool bTryRecalculate = true;
-		if (Modifier.HasExpired(CurrentFrame))
+		if (Modifier.HasExpired(CurrentTick))
 		{
 			if (Modifier.bShouldApplyOnRemoval)
 			{
@@ -133,7 +133,7 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentFrame)
 		FAdaAttribute& Attribute = AttributeRef.Get();
 		if (Attribute.bIsDirty)
 		{
-			RecalculateAttribute(Attribute, CurrentFrame);
+			RecalculateAttribute(Attribute, CurrentTick);
 		}
 	}
 
@@ -241,9 +241,18 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 	}
 	else
 	{
+		auto CacheModifier = [this, Attribute](const TSharedRef<FAdaAttributeModifier>& ModifierRef, FAdaAttribute& InAttribute) -> int32
+		{
+			// Cache the modifier.
+			int32 OutIndex = ActiveModifiers.Add(ModifierRef);
+			InAttribute.ActiveModifiers.Add(ModifierRef);
+
+			return OutIndex;
+		};
+		
 		const int32 ModifierId = GetNextModifierId();
 		// Create the modifier, but don't cache it yet as we may have extra setup to do first.
-		const TSharedRef<FAdaAttributeModifier>& ModifierRef = MakeShareable<FAdaAttributeModifier>(new FAdaAttributeModifier(AttributeTag, ModifierToApply, LatestFrame, ModifierId));
+		const TSharedRef<FAdaAttributeModifier>& ModifierRef = MakeShareable<FAdaAttributeModifier>(new FAdaAttributeModifier(AttributeTag, ModifierToApply, LatestTick, ModifierId));
 		
 		FAdaAttributeModifier& Modifier = ModifierRef.Get();
 		int32 OutIndex = INDEX_NONE;
@@ -263,17 +272,32 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 			}
 
 			// Cache the modifier.
-			OutIndex = ActiveModifiers.Add(ModifierRef);
-			Attribute.ActiveModifiers.Add(ModifierRef);
+			OutIndex = CacheModifier(ModifierRef, Attribute);
 			
 			Modifier.SetModifyingAttribute(*ModifyingAttribute);
 			ModifyingAttribute->AttributeDependencies.Add({AttributeTag, OutIndex});
 		}
+		else if (Modifier.CalculationType == EAdaAttributeModCalcType::SetByData)
+		{
+			const UWorld* const World = GetWorld();
+			A_ENSURE_RET(World, OutHandle);
+
+			const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
+			A_ENSURE_RET(GameState, OutHandle);
+
+			UAdaGameplayStateManager* StateManager = GameState->GetGameplayStateManager();
+			A_ENSURE_RET(StateManager, OutHandle);
+			
+			Modifier.SetModifierCurve(StateManager->GetCurveForModifier(ModifierToApply.ModifierCurveTag));
+			Modifier.CalculateValue();
+
+			// Cache the modifier.
+			OutIndex = CacheModifier(ModifierRef, Attribute);
+		}
 		else
 		{
 			// Cache the modifier.
-			OutIndex = ActiveModifiers.Add(ModifierRef);
-			Attribute.ActiveModifiers.Add(ModifierRef);
+			OutIndex = CacheModifier(ModifierRef, Attribute);
 		}
 
 		if (ModifierToApply.OperationType == EAdaAttributeModOpType::Override)
@@ -287,7 +311,7 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 
 	if (ModifierToApply.bRecalculateImmediately)
 	{
-		RecalculateAttribute(Attribute, LatestFrame);
+		RecalculateAttribute(Attribute, LatestTick);
 	}
 	else
 	{
@@ -388,10 +412,7 @@ bool UAdaGameplayStateComponent::RemoveModifierByIndex(int32 Index)
 bool UAdaGameplayStateComponent::RemoveModifier_Internal(TSharedRef<FAdaAttributeModifier>& Modifier, int32 Index)
 {
 	TSharedPtr<FAdaAttribute> Attribute = FindAttribute_Internal(Modifier->AffectedAttribute);
-	if (!A_ENSURE(Attribute.IsValid()))
-	{
-		return false;
-	}
+	A_ENSURE_RET(Attribute.IsValid(), false);
 
 	Attribute->ActiveModifiers.Remove(Modifier);
 
@@ -483,7 +504,7 @@ void UAdaGameplayStateComponent::ApplyOverridingModifier(FAdaAttribute& Attribut
 	}
 }
 
-void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, const uint64& CurrentFrame)
+void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, const uint64& CurrentTick)
 {
 	// Get base value.
 	float BaseValue = Attribute.BaseValue;
@@ -533,7 +554,7 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 				continue;
 			}
 
-			if (!Modifier->CanApply(CurrentFrame))
+			if (!Modifier->CanApply(CurrentTick))
 			{
 				continue;
 			}
@@ -592,7 +613,7 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 				}
 			}
 
-			Modifier->PostApply(CurrentFrame);
+			Modifier->PostApply(CurrentTick);
 		}
 
 		BaseValue = ((BaseValue + AggregatedBaseAdditives) * AggregatedBaseMultipliers) + AggregatedBasePostAdditives;

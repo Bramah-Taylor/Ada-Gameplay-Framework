@@ -23,6 +23,7 @@ public class AdaGameplay : ModuleRules
 			"Core",
 			"AdaCore", 
 			"GameplayTags",
+			"DataRegistry"
 		});
 		
 		PrivateDependencyModuleNames.AddRange(new string[]

@@ -1,7 +1,8 @@
 // Copyright Matt Bramah-Taylor, 2025. All Rights Reserved.
 
-
 #include "GameplayState/AdaGameplayStateManager.h"
+
+#include "DataRegistrySubsystem.h"
 
 #include "Simulation/AdaTickManager.h"
 #include "GameplayState/AdaGameplayStateComponent.h"
@@ -67,6 +68,19 @@ void UAdaGameplayStateManager::UnregisterStateComponent(UAdaGameplayStateCompone
 	}
 
 	TickBuckets[*FoundBucket].Components.Remove(StateComponent);
+}
+
+const UCurveFloat* UAdaGameplayStateManager::GetCurveForModifier(const FGameplayTag CurveTag)
+{
+	const UDataRegistrySubsystem* const DataRegistrySubsystem = UDataRegistrySubsystem::Get();
+	A_ENSURE_RET(IsValid(DataRegistrySubsystem), nullptr);
+
+	// Nasty hack because Epic *still* refuses to add engine-level support for tags to data tables.
+	FName CurveTagAsName = FName(CurveTag.ToString());
+	const FAdaAttributeCurveModifierRow* const CurveModifierRow = DataRegistrySubsystem->GetCachedItem<FAdaAttributeCurveModifierRow>({"CurveModifiers", CurveTagAsName});
+	A_ENSURE_RET(CurveModifierRow, nullptr);
+
+	return CurveModifierRow->Curve;
 }
 
 void UAdaGameplayStateManager::FixedTick(const uint64& CurrentFrame)

@@ -6,6 +6,7 @@
 
 #include "AdaGameplayStateManager.generated.h"
 
+struct FGameplayTag;
 class UAdaGameplayStateComponent;
 
 #define ADA_TICK_BUCKET_COUNT 15
@@ -20,6 +21,8 @@ public:
 
 	void RegisterStateComponent(UAdaGameplayStateComponent* StateComponent);
 	void UnregisterStateComponent(UAdaGameplayStateComponent* StateComponent);
+
+	static const UCurveFloat* GetCurveForModifier(const FGameplayTag CurveTag);
 
 protected:
 	// Begin UActorComponent overrides

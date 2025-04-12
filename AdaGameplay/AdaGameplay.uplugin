@@ -25,6 +25,10 @@
 		{
 			"Name": "AdaCore",
 			"Enabled": true
+		},
+		{
+			"Name": "DataRegistry",
+			"Enabled": true
 		}
 	]
 }

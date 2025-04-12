@@ -6,7 +6,7 @@
 
 #include "GameplayState/AdaAttributeTypes.h"
 #include "GameplayState/AdaAttributeModifierTypes.h"
-#include "GameplayState/AdaGameplayEffect.h"
+#include "GameplayState/AdaStatusEffect.h"
 
 #include "AdaGameplayStateComponent.generated.h"
 
@@ -73,7 +73,7 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	// End UActorComponent overrides.
 
-	void FixedTick(const uint64& CurrentFrame);
+	void FixedTick(const uint64& CurrentTick);
 
 	// Utility functions for finding attributes on this component.
 	TSharedPtr<FAdaAttribute> FindAttribute_Internal(const FGameplayTag AttributeTag);
@@ -100,7 +100,7 @@ protected:
 	void ApplyOverridingModifier(FAdaAttribute& Attribute, const TSharedRef<FAdaAttributeModifier>& Modifier);
 
 	// Recalculate the value of an attribute from its modifiers.
-	void RecalculateAttribute(FAdaAttribute& Attribute, const uint64& CurrentFrame);
+	void RecalculateAttribute(FAdaAttribute& Attribute, const uint64& CurrentTick);
 
 	// Check if attribute A depends on attribute B. Used to prevent circular dependencies.
 	bool DoesAttributeDependOnOther(const FGameplayTag AttributeTag, const FGameplayTag OtherAttributeTag) const;
@@ -121,6 +121,6 @@ protected:
 
 	TSparseArray<TSharedRef<FAdaAttributeModifier>> ActiveModifiers;
 
-	uint64 LatestFrame = 0;
+	uint64 LatestTick = 0;
 	int32 LatestModifierId = 0;
 };

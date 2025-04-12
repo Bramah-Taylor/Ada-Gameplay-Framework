@@ -46,6 +46,13 @@ void FAdaAttributeModifierSpec::SetDelegate(const FAdaAttributeModifierDelegate&
 	ModifierDelegate = Delegate;
 }
 
+void FAdaAttributeModifierSpec::SetCurveData(const FGameplayTag CurveTag, const float InCurveSpeed, const float InCurveMultiplier)
+{
+	ModifierCurveTag = CurveTag;
+	CurveSpeed = InCurveSpeed;
+	CurveMultiplier = InCurveMultiplier;
+}
+
 bool FAdaAttributeModifierSpec::ModifiesClamping() const
 {
 	return ClampingParams.bActive;
@@ -56,7 +63,7 @@ bool FAdaAttributeModifierSpec::AffectsBaseValue() const
 	return ApplicationType != EAdaAttributeModApplicationType::Duration && ApplicationType != EAdaAttributeModApplicationType::Persistent;
 }
 
-FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const FAdaAttributeModifierSpec& ModifierSpec, const uint64& CurrentFrame, const int32 NewId) :
+FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const FAdaAttributeModifierSpec& ModifierSpec, const uint64& CurrentTick, const int32 NewId) :
 	AffectedAttribute(Attribute),
 	ApplicationType(ModifierSpec.ApplicationType),
 	CalculationType(ModifierSpec.CalculationType),
@@ -68,17 +75,20 @@ FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const
 	Interval(ModifierSpec.Interval),
 	Duration(ModifierSpec.Duration),
 	Identifier(NewId),
+	ModifierCurveTag(ModifierSpec.ModifierCurveTag),
+	CurveSpeed(ModifierSpec.CurveSpeed),
+	CurveMultiplier(ModifierSpec.CurveMultiplier),
 	bShouldApplyOnAdd(ModifierSpec.bRecalculateImmediately),
 	bShouldApplyOnRemoval(ModifierSpec.bShouldApplyOnRemoval)
 {
 	if (ApplicationType == EAdaAttributeModApplicationType::Periodic)
 	{
-		LastApplicationFrame = CurrentFrame;
-		StartFrame = CurrentFrame;
+		LastApplicationTick = CurrentTick;
+		StartTick = CurrentTick;
 	}
 	else if (ApplicationType == EAdaAttributeModApplicationType::Duration || ApplicationType == EAdaAttributeModApplicationType::Ticking)
 	{
-		StartFrame = CurrentFrame;
+		StartTick = CurrentTick;
 	}
 }
 
@@ -89,14 +99,14 @@ bool FAdaAttributeModifier::HasDuration() const
 	|| (ApplicationType == EAdaAttributeModApplicationType::Ticking && Duration != 0);
 }
 
-bool FAdaAttributeModifier::HasExpired(const uint64& CurrentFrame) const
+bool FAdaAttributeModifier::HasExpired(const uint64& CurrentTick) const
 {
 	if (!HasDuration())
 	{
 		return false;
 	}
 
-	return CurrentFrame >= StartFrame + Duration;
+	return CurrentTick >= StartTick + Duration;
 }
 
 bool FAdaAttributeModifier::ModifiesClamping() const
@@ -141,7 +151,7 @@ bool FAdaAttributeModifier::ShouldRecalculate() const
 	return false;
 }
 
-bool FAdaAttributeModifier::CanApply(const uint64& CurrentFrame)
+bool FAdaAttributeModifier::CanApply(const uint64& CurrentTick)
 {
 	switch (ApplicationType)
 	{
@@ -153,7 +163,7 @@ bool FAdaAttributeModifier::CanApply(const uint64& CurrentFrame)
 				return true;
 			}
 			
-			return CurrentFrame - LastApplicationFrame >= Interval;
+			return CurrentTick - LastApplicationTick >= Interval;
 		}
 		case EAdaAttributeModApplicationType::Persistent:
 		{
@@ -194,7 +204,7 @@ float FAdaAttributeModifier::CalculateValue()
 		}
 		case EAdaAttributeModCalcType::SetByDelegate:
 		{
-			A_ENSURE_RET(ModifierDelegate.bIsSet, false);
+			A_ENSURE_RET(ModifierDelegate.bIsSet, ModifierValue);
 			ModifierValue = ModifierDelegate.RecalculateModifierFunc(AffectedAttribute);
 			return ModifierValue;
 		}
@@ -205,7 +215,8 @@ float FAdaAttributeModifier::CalculateValue()
         }
 		case EAdaAttributeModCalcType::SetByData:
 		{
-			// #TODO(Ada.Gameplay): Implement.
+			A_ENSURE_MSG_RET(ModifierCurve.IsValid(), ModifierValue, TEXT("%hs: Invalid Curve Float asset for modifier %s."), __FUNCTION__, *ModifierCurveTag.ToString());
+			ModifierValue = ModifierCurve->GetFloatValue(CurveProgress) * CurveMultiplier;
 			return ModifierValue;
 		}
 	}
@@ -218,11 +229,16 @@ void FAdaAttributeModifier::SetValue(float NewValue)
 	ModifierValue = NewValue;
 }
 
-void FAdaAttributeModifier::PostApply(const uint64& CurrentFrame)
+void FAdaAttributeModifier::PostApply(const uint64& CurrentTick)
 {
 	if (ApplicationType == EAdaAttributeModApplicationType::Periodic)
 	{
-		LastApplicationFrame = CurrentFrame;
+		LastApplicationTick = CurrentTick;
+	}
+
+	if (CalculationType == EAdaAttributeModCalcType::SetByData)
+	{
+		CurveProgress += CurveSpeed;
 	}
 }
 
@@ -242,6 +258,13 @@ void FAdaAttributeModifier::SetModifyingAttribute(const FAdaAttribute& InAttribu
 
 	ModifyingAttribute = InAttribute.AttributeTag;
 	ModifierValue = InAttribute.GetCurrentValue();
+}
+
+void FAdaAttributeModifier::SetModifierCurve(const UCurveFloat* const InModifierCurve)
+{
+	A_ENSURE_RET(IsValid(InModifierCurve), void(0));
+
+	ModifierCurve = InModifierCurve;
 }
 
 FAdaAttributeModifierHandle::FAdaAttributeModifierHandle(UAdaGameplayStateComponent* Owner, const EAdaAttributeModApplicationType Type, const int32 NewIndex, const int32 NewId) :

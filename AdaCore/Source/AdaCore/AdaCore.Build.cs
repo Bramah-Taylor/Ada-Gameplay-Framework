@@ -21,6 +21,7 @@ public class AdaCore : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			"Core",
+			"DataRegistry"
 		});
 		
 		PrivateDependencyModuleNames.AddRange(new string[]
