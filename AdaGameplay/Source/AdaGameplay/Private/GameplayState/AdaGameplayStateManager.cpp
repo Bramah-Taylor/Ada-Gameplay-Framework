@@ -104,7 +104,7 @@ void UAdaGameplayStateManager::FixedTick(const uint64& CurrentFrame)
 
 void UAdaGameplayStateManager::IncrementAssignmentCounter()
 {
-	NextBucketToAssign = NextBucketToAssign < ADA_TICK_BUCKET_COUNT - 1 ? NextBucketToAssign + 1 : 0;
+	NextBucketToAssign = (NextBucketToAssign < ADA_TICK_BUCKET_COUNT - 1) ? NextBucketToAssign + 1 : 0;
 }
 
 void UAdaGameplayStateManager::IncrementTickCounter()

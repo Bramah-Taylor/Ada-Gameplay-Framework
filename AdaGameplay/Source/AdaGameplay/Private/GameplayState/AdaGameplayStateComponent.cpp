@@ -337,6 +337,45 @@ bool UAdaGameplayStateComponent::RemoveModifier(FAdaAttributeModifierHandle& Mod
 	return true;
 }
 
+bool UAdaGameplayStateComponent::HasState(const FGameplayTag StateTag, bool bExactMatch) const
+{
+	return bExactMatch ? ActiveStates.HasTagExact(StateTag) : ActiveStates.HasTag(StateTag);
+}
+
+bool UAdaGameplayStateComponent::HasAnyState(const FGameplayTagContainer& StateTags, bool bExactMatch) const
+{
+	return bExactMatch ? ActiveStates.HasAnyExact(StateTags) : ActiveStates.HasAny(StateTags);
+}
+
+bool UAdaGameplayStateComponent::HasAllState(const FGameplayTagContainer& StateTags, bool bExactMatch) const
+{
+	return bExactMatch ? ActiveStates.HasAllExact(StateTags) : ActiveStates.HasAll(StateTags);
+}
+
+bool UAdaGameplayStateComponent::AddStateTag(const FGameplayTag StateTag)
+{
+	A_ENSURE_MSG_RET(StateTag.IsValid(), false, TEXT("%hs: Attempted to add invalid state tag."), __FUNCTION__);
+	
+	if (ActiveStates.HasTagExact(StateTag))
+	{
+		return false;
+	}
+	
+	ActiveStates.AddTag(StateTag);
+
+	return true;
+}
+
+bool UAdaGameplayStateComponent::RemoveStateTag(const FGameplayTag StateTag)
+{
+	if (!ActiveStates.HasTagExact(StateTag))
+	{
+		return false;
+	}
+	
+	return ActiveStates.RemoveTag(StateTag);
+}
+
 TSharedPtr<FAdaAttribute> UAdaGameplayStateComponent::FindAttribute_Internal(const FGameplayTag AttributeTag)
 {
 	for (TSharedRef<FAdaAttribute>& Attribute : Attributes)

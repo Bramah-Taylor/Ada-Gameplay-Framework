@@ -58,11 +58,11 @@ UENUM()
 enum class EAdaAttributeModCalcType : uint8
 {
 	SetByCaller			UMETA(Tooltip = "Static modifier set on creation of the modifier"),
-	SetByDelegate		UMETA(Tooltip = "Dynamic modifier, recalculated based on the provided delegate"),
+	SetByDelegate		UMETA(Tooltip = "Dynamic modifier, recalculated based on the provided delegate", Hidden),
 	SetByEffect			UMETA(Tooltip = "Dynamic modifier, recalculated based on the owning gameplay effect"),
 	SetByData			UMETA(Tooltip = "Dynamic modifier, recalculated based on the provided float curve"),
 	SetByAttribute		UMETA(Tooltip = "Dynamic modifier, recalculated based on the modifying attribute"),
-	SetExternally		UMETA(Tooltip = "Dynamic modifier, set externally by some other system")
+	SetExternally		UMETA(Tooltip = "Dynamic modifier, set externally by some other system", Hidden)
 };
 
 UENUM()
@@ -74,17 +74,33 @@ enum class EAdaAttributeModOpType : uint8
 	PostAdditive
 };
 
-USTRUCT()
+// Struct representing changes to an attribute's clamping parameters.
+// This works as an additive change to the min, max, or both. Whether it affects the base or current clamping values
+// will depend on the type of modifier being applied.
+USTRUCT(BlueprintType)
 struct FAdaAttributeModifierClampingParams
 {
 	GENERATED_BODY()
 
 public:
+	// Whether this modifier changes the attribute's clamping parameters.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Clamping")
 	bool bActive = false;
+
+	// Whether this modifier changes the attribute's minimum clamping parameter.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Clamping", Meta = (EditCondition = "bActive", EditConditionHides))
 	bool bHasMinDelta = false;
-	bool bHasMaxDelta = false;
-	
+
+	// The amount by which to change the minimum clamping parameter.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Clamping", Meta = (EditCondition = "bHasMinDelta", EditConditionHides))
 	float MinDelta = 0.0f;
+
+	// Whether this modifier changes the attribute's maximum clamping parameter.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Clamping", Meta = (EditCondition = "bActive", EditConditionHides))
+	bool bHasMaxDelta = false;
+
+	// The amount by which to change the maximum clamping parameter.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Clamping", Meta = (EditCondition = "bHasMaxDelta", EditConditionHides))
 	float MaxDelta = 0.0f;
 };
 
@@ -104,7 +120,7 @@ public:
 
 // Struct defining initialization params for an attribute modifier.
 // This limits exposure to the actual live data used by the struct and hands full control of initialization over to the attribute system.
-USTRUCT()
+USTRUCT(BlueprintType)
 struct ADAGAMEPLAY_API FAdaAttributeModifierSpec
 {
 	GENERATED_BODY()
@@ -112,6 +128,7 @@ struct ADAGAMEPLAY_API FAdaAttributeModifierSpec
 	friend struct FAdaAttributeModifier;
 	friend class UAdaGameplayStateComponent;
 	friend class UAdaAttributeFunctionLibrary;
+	friend class UAdaStatusEffect;
 
 public:
 	void SetPeriodicData(uint8 InInterval, uint32 InDuration, bool bApplyOnAdd, bool bApplyOnRemoval);
@@ -124,27 +141,60 @@ public:
 	bool AffectsBaseValue() const;
 
 public:
+	// How, and when, we apply this modifier to the target attribute.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	EAdaAttributeModApplicationType ApplicationType = EAdaAttributeModApplicationType::Instant;
+
+	// How, and when, we calculate the value for this modifier.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	EAdaAttributeModCalcType CalculationType = EAdaAttributeModCalcType::SetByCaller;
+
+	// How this modifier's contribution to the target attribute's final value is calculated.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	EAdaAttributeModOpType OperationType = EAdaAttributeModOpType::Additive;
-	
+
+	// The attribute to use as the value for our modification.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "CalculationType==EAdaAttributeModCalcType::SetByAttribute", EditConditionHides))
 	FGameplayTag ModifyingAttribute = FGameplayTag::EmptyTag;
-	
+
+	// The value this modifier will alter the target attribute by.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "CalculationType!=EAdaAttributeModCalcType::SetByAttribute", EditConditionHides))
 	float ModifierValue = 0.0f;
-	
+
+	// Whether to recalculate the target attribute as soon as this modifier is applied.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "ApplicationType!=EAdaAttributeModApplicationType::Instant", EditConditionHides))
 	bool bRecalculateImmediately = false;
 
-private:
+protected:
+	// The interval, in ticks, for when this modifier should be applied to the target attribute.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "ApplicationType==EAdaAttributeModApplicationType::Periodic", EditConditionHides, ClampMin = 1))
 	uint8 Interval = 0;
-	uint32 Duration = 0;
-	
+
+	// The total duration, in ticks, for how long this modifier is active.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "ApplicationType!=EAdaAttributeModApplicationType::Instant && ApplicationType!=EAdaAttributeModApplicationType::Persistent", EditConditionHides, ClampMin = 1))
+	int32 Duration = 0;
+
+	// Whether to apply this modifier to the target attribute once it has expired.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "ApplicationType==EAdaAttributeModApplicationType::Periodic", EditConditionHides))
 	bool bShouldApplyOnRemoval = false;
 
+	// The tag for the curve modifier that we're using to lookup values from.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "CalculationType==EAdaAttributeModCalcType::SetByData", EditConditionHides))
 	FGameplayTag ModifierCurveTag = FGameplayTag::EmptyTag;
+
+	// How quickly this data curve based modifier should progress through the curve, from 0 to 1.
+	// 1 will default to 100% speed, which means the curve will have been fully traversed.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "CalculationType==EAdaAttributeModCalcType::SetByData", EditConditionHides))
 	float CurveSpeed = 0.1f;
+
+	// Multiplier for the output value from the curve lookup.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "CalculationType==EAdaAttributeModCalcType::SetByData", EditConditionHides))
 	float CurveMultiplier = 100.0f;
 
+	// Struct holding params for optional clamping modification.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FAdaAttributeModifierClampingParams ClampingParams;
+
 	FAdaAttributeModifierDelegate ModifierDelegate;
 };
 

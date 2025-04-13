@@ -63,6 +63,34 @@ public:
 	/// @return Whether the modifier was removed successfully.
 	bool RemoveModifier(FAdaAttributeModifierHandle& ModifierHandle);
 
+	/// @brief	Check if this component has the specified state tag.
+	/// @param	StateTag		The tag to check.
+	/// @param	bExactMatch		Whether the found tag must be exactly the same as the specified tag.
+	/// @return Whether this component has the specified tag.
+	bool HasState(const FGameplayTag StateTag, bool bExactMatch = true) const;
+
+	/// @brief	Check if this component has any of the specified state tags.
+	/// @param	StateTags		The tags to check.
+	/// @param	bExactMatch		Whether the found tags must be exactly the same as the specified tags.
+	/// @return Whether this component has any of the specified tags.
+	bool HasAnyState(const FGameplayTagContainer& StateTags, bool bExactMatch = true) const;
+
+	/// @brief	Check if this component has all of the specified state tags.
+	/// @param	StateTags		The tags to check.
+	/// @param	bExactMatch		Whether the found tags must be exactly the same as the specified tags.
+	/// @return Whether this component has all of the specified tags.
+	bool HasAllState(const FGameplayTagContainer& StateTags, bool bExactMatch = true) const;
+
+	/// @brief	Add a tag representing some state to this component.
+	/// @param	StateTag		The tag to add.
+	/// @return Whether this component successfully added the tag.
+	bool AddStateTag(const FGameplayTag StateTag);
+
+	/// @brief	Remove a tag representing some state to this component.
+	/// @param	StateTag		The tag to add.
+	/// @return Whether this component successfully removed the tag.
+	bool RemoveStateTag(const FGameplayTag StateTag);
+
 	// #TODO(Ada.Gameplay): Move to child class in game module
 	FORCEINLINE const TArray<TSharedRef<FAdaAttribute>>& GetAllAttributes() const { return Attributes; };
 	FORCEINLINE const TSparseArray<TSharedRef<FAdaAttributeModifier>>& GetAllModifiers() const { return ActiveModifiers; };
@@ -120,6 +148,8 @@ protected:
 	TArray<TSharedRef<FAdaAttribute>> Attributes;
 
 	TSparseArray<TSharedRef<FAdaAttributeModifier>> ActiveModifiers;
+
+	FGameplayTagContainer ActiveStates;
 
 	uint64 LatestTick = 0;
 	int32 LatestModifierId = 0;
