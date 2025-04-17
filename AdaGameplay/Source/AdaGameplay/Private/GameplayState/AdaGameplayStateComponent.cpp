@@ -337,6 +337,23 @@ bool UAdaGameplayStateComponent::RemoveModifier(FAdaAttributeModifierHandle& Mod
 	return true;
 }
 
+FAdaStatusEffectHandle UAdaGameplayStateComponent::AddStatusEffect(const FGameplayTag StatusEffectTag)
+{
+	return FAdaStatusEffectHandle();
+}
+
+bool UAdaGameplayStateComponent::RemoveStatusEffect(FAdaStatusEffectHandle& StatusEffectHandle)
+{
+	// #TODO(Ada_Gameplay): Implement
+	return false;
+}
+
+bool UAdaGameplayStateComponent::ClearStatusEffect(const FGameplayTag StatusEffectTag)
+{
+	// #TODO(Ada_Gameplay): Implement
+	return false;
+}
+
 bool UAdaGameplayStateComponent::HasState(const FGameplayTag StateTag, bool bExactMatch) const
 {
 	return bExactMatch ? ActiveStates.HasTagExact(StateTag) : ActiveStates.HasTag(StateTag);

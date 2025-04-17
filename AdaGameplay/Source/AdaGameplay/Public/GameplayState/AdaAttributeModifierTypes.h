@@ -128,7 +128,7 @@ struct ADAGAMEPLAY_API FAdaAttributeModifierSpec
 	friend struct FAdaAttributeModifier;
 	friend class UAdaGameplayStateComponent;
 	friend class UAdaAttributeFunctionLibrary;
-	friend class UAdaStatusEffect;
+	friend class UAdaStatusEffectDefinition;
 
 public:
 	void SetPeriodicData(uint8 InInterval, uint32 InDuration, bool bApplyOnAdd, bool bApplyOnRemoval);

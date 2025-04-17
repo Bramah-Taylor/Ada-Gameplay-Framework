@@ -74,10 +74,8 @@ const UCurveFloat* UAdaGameplayStateManager::GetCurveForModifier(const FGameplay
 {
 	const UDataRegistrySubsystem* const DataRegistrySubsystem = UDataRegistrySubsystem::Get();
 	A_ENSURE_RET(IsValid(DataRegistrySubsystem), nullptr);
-
-	// Nasty hack because Epic *still* refuses to add engine-level support for tags to data tables.
-	FName CurveTagAsName = FName(CurveTag.ToString());
-	const FAdaAttributeCurveModifierRow* const CurveModifierRow = DataRegistrySubsystem->GetCachedItem<FAdaAttributeCurveModifierRow>({"CurveModifiers", CurveTagAsName});
+	
+	const FAdaAttributeCurveModifierRow* const CurveModifierRow = DataRegistrySubsystem->GetCachedItem<FAdaAttributeCurveModifierRow>({"CurveModifiers", CurveTag.GetTagName()});
 	A_ENSURE_RET(CurveModifierRow, nullptr);
 
 	return CurveModifierRow->Curve;

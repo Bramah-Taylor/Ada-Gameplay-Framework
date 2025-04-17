@@ -6,7 +6,8 @@
 
 #include "GameplayState/AdaAttributeTypes.h"
 #include "GameplayState/AdaAttributeModifierTypes.h"
-#include "GameplayState/AdaStatusEffect.h"
+#include "GameplayState/AdaStatusEffectDefinition.h"
+#include "GameplayState/AdaStatusEffectTypes.h"
 
 #include "AdaGameplayStateComponent.generated.h"
 
@@ -62,6 +63,22 @@ public:
 	/// @param	ModifierHandle	Handle to the modifier we wish to remove.
 	/// @return Whether the modifier was removed successfully.
 	bool RemoveModifier(FAdaAttributeModifierHandle& ModifierHandle);
+
+	/// @brief	Add a status effect to this component.
+	/// @param	StatusEffectTag	The gameplay tag representing the status effect.
+	/// @return Handle to the newly added status effect.
+	/// @note	The handle will be invalid if the status effect failed to apply.
+	FAdaStatusEffectHandle AddStatusEffect(const FGameplayTag StatusEffectTag);
+
+	/// @brief	Remove a status effect from this component.
+	/// @param	StatusEffectHandle	The handle to the status effect we want to remove from this component.
+	/// @return Whether the status effect was removed successfully.
+	bool RemoveStatusEffect(FAdaStatusEffectHandle& StatusEffectHandle);
+
+	/// @brief	Clear all instances of a status effect from this component.
+	/// @param	StatusEffectTag	The gameplay tag representing the status effect.
+	/// @return Whether the status effect was cleared successfully.
+	bool ClearStatusEffect(const FGameplayTag StatusEffectTag);
 
 	/// @brief	Check if this component has the specified state tag.
 	/// @param	StateTag		The tag to check.
@@ -148,6 +165,8 @@ protected:
 	TArray<TSharedRef<FAdaAttribute>> Attributes;
 
 	TSparseArray<TSharedRef<FAdaAttributeModifier>> ActiveModifiers;
+	
+	TSparseArray<TStrongObjectPtr<UAdaStatusEffectDefinition>> ActiveStatusEffects;
 
 	FGameplayTagContainer ActiveStates;
 

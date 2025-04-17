@@ -21,6 +21,8 @@ public class AdaGameplayEditor : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			"Core",
+			"CoreUObject",
+			"Engine",
 			"AdaCore", 
 			"AdaGameplay",
 			"GameplayTags",
@@ -30,8 +32,9 @@ public class AdaGameplayEditor : ModuleRules
 		
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"CoreUObject",
-			"Engine",
+			"ClassViewer",
+			"EditorFramework",
+			"UnrealEd",
 			"Slate",
 			"SlateCore",
 		});
