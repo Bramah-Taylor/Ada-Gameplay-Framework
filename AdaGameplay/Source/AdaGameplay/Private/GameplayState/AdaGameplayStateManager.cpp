@@ -3,6 +3,7 @@
 #include "GameplayState/AdaGameplayStateManager.h"
 
 #include "DataRegistrySubsystem.h"
+#include "Engine/AssetManager.h"
 
 #include "Simulation/AdaTickManager.h"
 #include "GameplayState/AdaGameplayStateComponent.h"
@@ -19,6 +20,19 @@ void UAdaGameplayStateManager::InitializeComponent()
 	Super::InitializeComponent();
 	
 	TickBuckets.AddDefaulted(ADA_TICK_BUCKET_COUNT);
+
+	// Ideally, this should probably go into a world subsystem, but I'd prefer to encapsulate all global gameplay state
+	// functionality on this component. If this proves to be a problem, it can be moved later.
+	UAssetManager& AssetManager = UAssetManager::Get();
+	TArray<UObject*> LoadedObjects;
+	AssetManager.GetPrimaryAssetObjectList(UAdaStatusEffectDefinition::PrimaryAssetType, LoadedObjects);
+	for (const UObject* const LoadedObject : LoadedObjects)
+	{
+		if (const UAdaStatusEffectDefinition* const LoadedStatusEffect = Cast<UAdaStatusEffectDefinition>(LoadedObject))
+		{
+			LoadedStatusEffectDefinitions.Add(LoadedStatusEffect->EffectTag, LoadedStatusEffect);
+		}
+	}
 }
 
 void UAdaGameplayStateManager::BeginPlay()
@@ -43,6 +57,8 @@ void UAdaGameplayStateManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	A_VALIDATE_OBJ(TickManager, void(0));
 
 	TickManager->UnregisterTickFunction(this);
+
+	LoadedStatusEffectDefinitions.Empty();
 	
 	Super::EndPlay(EndPlayReason);
 }
@@ -68,6 +84,14 @@ void UAdaGameplayStateManager::UnregisterStateComponent(UAdaGameplayStateCompone
 	}
 
 	TickBuckets[*FoundBucket].Components.Remove(StateComponent);
+}
+
+const UAdaStatusEffectDefinition* UAdaGameplayStateManager::GetStatusEffectDefinition(const FGameplayTag EffectTag) const
+{
+	const TObjectPtr<const UAdaStatusEffectDefinition>* const FoundDefPtr = LoadedStatusEffectDefinitions.Find(EffectTag);
+	A_ENSURE_MSG_RET(FoundDefPtr, nullptr, TEXT("%hs: Could not find status effect definition for tag %s."), __FUNCTION__, *EffectTag.ToString());
+
+	return *FoundDefPtr;
 }
 
 const UCurveFloat* UAdaGameplayStateManager::GetCurveForModifier(const FGameplayTag CurveTag)

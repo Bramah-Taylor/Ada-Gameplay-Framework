@@ -2,12 +2,13 @@
 
 #pragma once
 
+#include "GameplayTagContainer.h"
 #include "Components/ActorComponent.h"
 
 #include "AdaGameplayStateManager.generated.h"
 
-struct FGameplayTag;
 class UAdaGameplayStateComponent;
+class UAdaStatusEffectDefinition;
 
 #define ADA_TICK_BUCKET_COUNT 15
 
@@ -21,6 +22,8 @@ public:
 
 	void RegisterStateComponent(UAdaGameplayStateComponent* StateComponent);
 	void UnregisterStateComponent(UAdaGameplayStateComponent* StateComponent);
+
+	const UAdaStatusEffectDefinition* GetStatusEffectDefinition(const FGameplayTag EffectTag) const;
 
 	static const UCurveFloat* GetCurveForModifier(const FGameplayTag CurveTag);
 
@@ -48,4 +51,6 @@ private:
 
 	uint8 NextBucketToTick = 0;
 	uint8 NextBucketToAssign = 0;
+
+	TMap<FGameplayTag, TObjectPtr<const UAdaStatusEffectDefinition>> LoadedStatusEffectDefinitions;
 };

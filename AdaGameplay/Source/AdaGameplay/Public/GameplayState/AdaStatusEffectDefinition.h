@@ -17,14 +17,20 @@ class ADAGAMEPLAY_API UAdaStatusEffectDefinition : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
-	// #TODO(Ada_Gameplay): Primary asset id?
-	
 public:
+	// Begin UPrimaryDataAsset overrides
+	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
+	// End UPrimaryDataAsset overrides
+	
 #if WITH_EDITOR
+	// Begin UObject overrides
 	virtual EDataValidationResult IsDataValid(FDataValidationContext& Context) const override;
+	// End UObject overrides
 #endif
 
-protected:
+public:
+	inline static FPrimaryAssetType PrimaryAssetType = TEXT("Ada.StatusEffectDefinition");
+
 	// Tag identifying this status effect.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Definition")
 	FGameplayTag EffectTag = FGameplayTag::EmptyTag;

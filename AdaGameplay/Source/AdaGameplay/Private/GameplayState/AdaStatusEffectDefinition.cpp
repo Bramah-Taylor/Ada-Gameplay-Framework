@@ -7,6 +7,11 @@
 
 #define LOCTEXT_NAMESPACE "AdaStatusEffect"
 
+FPrimaryAssetId UAdaStatusEffectDefinition::GetPrimaryAssetId() const
+{
+	return FPrimaryAssetId(PrimaryAssetType, EffectTag.GetTagName());
+}
+
 EDataValidationResult UAdaStatusEffectDefinition::IsDataValid(FDataValidationContext& Context) const
 {
 	EDataValidationResult Result = Super::IsDataValid(Context);
