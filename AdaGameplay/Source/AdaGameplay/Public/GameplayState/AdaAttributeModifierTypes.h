@@ -6,6 +6,7 @@
 
 #include "AdaAttributeModifierTypes.generated.h"
 
+class UAdaStatusEffect;
 struct FAdaAttribute;
 class UAdaGameplayStateComponent;
 
@@ -109,11 +110,14 @@ struct ADAGAMEPLAY_API FAdaAttributeModifierDelegate
 {
 	GENERATED_BODY()
 
+	using FShouldRecalculateDelegate = TFunction<bool(const FGameplayTag)>;
+	using FRecalculateDelegate = TFunction<float(const FGameplayTag)>;
+
 public:
 	bool bIsSet = false;
 
-	TFunction<bool(const FGameplayTag)> ShouldRecalculateModifierFunc;
-	TFunction<float(const FGameplayTag)> RecalculateModifierFunc;
+	FShouldRecalculateDelegate ShouldRecalculateModifierFunc;
+	FRecalculateDelegate RecalculateModifierFunc;
 
 	TWeakObjectPtr<UObject> InvokingObject = nullptr;
 };
@@ -136,6 +140,7 @@ public:
 	void SetClampingParams(TOptional<float> MinDelta, TOptional<float> MaxDelta);
 	void SetDelegate(const FAdaAttributeModifierDelegate& Delegate);
 	void SetCurveData(const FGameplayTag CurveTag, const float InCurveSpeed, const float InCurveMultiplier);
+	void SetEffectData(UAdaStatusEffect* StatusEffect);
 	
 	bool ModifiesClamping() const;
 	bool AffectsBaseValue() const;
@@ -195,6 +200,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FAdaAttributeModifierClampingParams ClampingParams;
 
+	TWeakObjectPtr<UAdaStatusEffect> ParentStatusEffect = nullptr;
+
 	FAdaAttributeModifierDelegate ModifierDelegate;
 };
 
@@ -247,8 +254,10 @@ protected:
 
 private:
 	// Cached curve float to look up values for curve modifiers.
-	UPROPERTY()
 	TWeakObjectPtr<const UCurveFloat> ModifierCurve = nullptr;
+
+	// The status effect that owns this modifier, if it was created by a status effect's activation.
+	TWeakObjectPtr<UAdaStatusEffect> ParentStatusEffect = nullptr;
 	
 	// Struct for holding params for optional set by delegate recalculation.
 	FAdaAttributeModifierDelegate ModifierDelegate;
@@ -314,7 +323,7 @@ public:
 	FAdaAttributeModifierHandle() = default;
 	FAdaAttributeModifierHandle(UAdaGameplayStateComponent* Owner, const EAdaAttributeModApplicationType Type, const int32 NewIndex, const int32 NewId);
 	
-	bool IsValid() const;
+	bool IsValid(bool bValidateOwner = false) const;
 	void Invalidate();
 
 	FAdaAttributeModifier* Get();

@@ -3,7 +3,9 @@
 #include "GameplayState/AdaAttributeModifierTypes.h"
 
 #include "GameplayState/AdaGameplayStateComponent.h"
+#include "GameplayState/AdaStatusEffect.h"
 #include "Debug/AdaAssertionMacros.h"
+#include "GameplayState/AdaAttributeFunctionLibrary.h"
 
 void FAdaAttributeModifierSpec::SetPeriodicData(uint8 InInterval, uint32 InDuration, bool bApplyOnAdd, bool bApplyOnRemoval)
 {
@@ -53,6 +55,16 @@ void FAdaAttributeModifierSpec::SetCurveData(const FGameplayTag CurveTag, const 
 	CurveMultiplier = InCurveMultiplier;
 }
 
+void FAdaAttributeModifierSpec::SetEffectData(UAdaStatusEffect* StatusEffect)
+{
+	ParentStatusEffect = StatusEffect;
+
+	if (CalculationType == EAdaAttributeModCalcType::SetByEffect)
+	{
+		ModifierDelegate = UAdaAttributeFunctionLibrary::MakeModifierDelegate(StatusEffect, &UAdaStatusEffect::ShouldRecalculateModifier, &UAdaStatusEffect::RecalculateModifier);
+	}
+}
+
 bool FAdaAttributeModifierSpec::ModifiesClamping() const
 {
 	return ClampingParams.bActive;
@@ -70,6 +82,7 @@ FAdaAttributeModifier::FAdaAttributeModifier(const FGameplayTag Attribute, const
 	OperationType(ModifierSpec.OperationType),
 	bAffectsBase(ModifierSpec.AffectsBaseValue()),
 	ModifierValue(ModifierSpec.ModifierValue),
+	ParentStatusEffect(ModifierSpec.ParentStatusEffect),
 	ModifierDelegate(ModifierSpec.ModifierDelegate),
 	ClampingParams(ModifierSpec.ClampingParams),
 	Interval(ModifierSpec.Interval),
@@ -275,22 +288,29 @@ FAdaAttributeModifierHandle::FAdaAttributeModifierHandle(UAdaGameplayStateCompon
 	
 }
 
-bool FAdaAttributeModifierHandle::IsValid() const
+bool FAdaAttributeModifierHandle::IsValid(bool bValidateOwner) const
 {
-	if (Identifier == INDEX_NONE)
+	if (Identifier == INDEX_NONE || Index == INDEX_NONE)
 	{
 		return false;
 	}
-	
-	UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
-	A_VALIDATE_OBJ(OwningStateComponent, false);
 
-	if (OwningStateComponent->FindModifierByIndex(Index))
+	if (!bValidateOwner)
 	{
 		return true;
 	}
+	
+	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
+	A_VALIDATE_OBJ(OwningStateComponent, false);
 
-	return false;
+	const TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifierByIndex(Index);
+	if (!ModifierOptional.IsSet())
+	{
+		return false;
+	}
+
+	const TSharedRef<FAdaAttributeModifier> ModifierRef = ModifierOptional.GetValue();
+	return ModifierRef->GetIdentifier() == Identifier;
 }
 
 void FAdaAttributeModifierHandle::Invalidate()
@@ -302,16 +322,22 @@ void FAdaAttributeModifierHandle::Invalidate()
 
 FAdaAttributeModifier* FAdaAttributeModifierHandle::Get()
 {
-	UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
+	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
 	A_VALIDATE_OBJ(OwningStateComponent, nullptr);
 
-	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifierByIndex(Index);
+	const TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifierByIndex(Index);
 	if (!ModifierOptional.IsSet())
 	{
 		return nullptr;
 	}
 
-	return &*ModifierOptional.GetValue();
+	const TSharedRef<FAdaAttributeModifier> ModifierRef = ModifierOptional.GetValue();
+	if (ModifierRef->GetIdentifier() != Identifier)
+	{
+		return nullptr;
+	}
+
+	return &*ModifierRef;
 }
 
 const FAdaAttributeModifier* FAdaAttributeModifierHandle::Get() const

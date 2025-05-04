@@ -12,6 +12,8 @@ class UAdaStatusEffectDefinition;
 
 #define ADA_TICK_BUCKET_COUNT 15
 
+DECLARE_LOG_CATEGORY_EXTERN(LogAdaGameplayStateManager, Log, All);
+
 UCLASS()
 class ADAGAMEPLAY_API UAdaGameplayStateManager : public UActorComponent
 {
@@ -24,6 +26,7 @@ public:
 	void UnregisterStateComponent(UAdaGameplayStateComponent* StateComponent);
 
 	const UAdaStatusEffectDefinition* GetStatusEffectDefinition(const FGameplayTag EffectTag) const;
+	void GetAllStatusEffectTags(TArray<FGameplayTag>& OutTags) const;
 
 	static const UCurveFloat* GetCurveForModifier(const FGameplayTag CurveTag);
 
@@ -38,6 +41,8 @@ protected:
 
 	void IncrementAssignmentCounter();
 	void IncrementTickCounter();
+
+	void OnStatusEffectDefsLoaded();
 
 private:
 	struct FTickBucket

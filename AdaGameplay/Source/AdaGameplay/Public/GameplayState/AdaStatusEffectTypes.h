@@ -6,6 +6,7 @@
 
 class UAdaStatusEffectDefinition;
 class UAdaGameplayStateComponent;
+class UAdaStatusEffect;
 
 USTRUCT()
 struct ADAGAMEPLAY_API FAdaStatusEffectHandle
@@ -18,10 +19,10 @@ public:
 	FAdaStatusEffectHandle() = default;
 	FAdaStatusEffectHandle(UAdaGameplayStateComponent* Owner, const int32 InIndex, const int32 InId);
 	
-	bool IsValid() const;
+	bool IsValid(bool bValidateOwner = false) const;
 	void Invalidate();
 
-	const UAdaStatusEffectDefinition* Get() const;
+	const UAdaStatusEffect* Get() const;
 
 	bool Remove();
 	

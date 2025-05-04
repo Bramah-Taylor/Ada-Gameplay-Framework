@@ -2,7 +2,9 @@
 
 #include "GameplayState/AdaStatusEffectTypes.h"
 
+#include "Debug/AdaAssertionMacros.h"
 #include "GameplayState/AdaGameplayStateComponent.h"
+#include "GameplayState/AdaStatusEffect.h"
 
 FAdaStatusEffectHandle::FAdaStatusEffectHandle(UAdaGameplayStateComponent* Owner, const int32 InIndex, const int32 InId) :
 	OwningStateComponentWeak(Owner),
@@ -12,9 +14,26 @@ FAdaStatusEffectHandle::FAdaStatusEffectHandle(UAdaGameplayStateComponent* Owner
 	
 }
 
-bool FAdaStatusEffectHandle::IsValid() const
+bool FAdaStatusEffectHandle::IsValid(bool bValidateOwner) const
 {
-	// #TODO(Ada.Gameplay): Implement
+	if (Identifier == INDEX_NONE || Index == INDEX_NONE)
+	{
+		return false;
+	}
+
+	if (!bValidateOwner)
+	{
+		return true;
+	}
+	
+	UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
+	A_VALIDATE_OBJ(OwningStateComponent, false);
+
+	if (OwningStateComponent->FindStatusEffect(*this))
+	{
+		return true;
+	}
+
 	return false;
 }
 
@@ -25,14 +44,28 @@ void FAdaStatusEffectHandle::Invalidate()
 	Identifier = INDEX_NONE;
 }
 
-const UAdaStatusEffectDefinition* FAdaStatusEffectHandle::Get() const
+const UAdaStatusEffect* FAdaStatusEffectHandle::Get() const
 {
-	// #TODO(Ada.Gameplay): Implement
-	return nullptr;
+	if (Identifier == INDEX_NONE || Index == INDEX_NONE)
+	{
+		return nullptr;
+	}
+	
+	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
+	A_VALIDATE_OBJ(OwningStateComponent, nullptr);
+
+	return OwningStateComponent->FindStatusEffect(*this);
 }
 
 bool FAdaStatusEffectHandle::Remove()
 {
-	// #TODO(Ada.Gameplay): Implement
-	return false;
+	if (Identifier == INDEX_NONE || Index == INDEX_NONE)
+	{
+		return false;
+	}
+	
+	UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
+	A_VALIDATE_OBJ(OwningStateComponent, false);
+
+	return OwningStateComponent->RemoveStatusEffect(*this);
 }

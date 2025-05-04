@@ -9,6 +9,8 @@
 #include "GameplayState/AdaGameplayStateComponent.h"
 #include "Debug/AdaAssertionMacros.h"
 
+DEFINE_LOG_CATEGORY(LogAdaGameplayStateManager);
+
 UAdaGameplayStateManager::UAdaGameplayStateManager()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -24,15 +26,8 @@ void UAdaGameplayStateManager::InitializeComponent()
 	// Ideally, this should probably go into a world subsystem, but I'd prefer to encapsulate all global gameplay state
 	// functionality on this component. If this proves to be a problem, it can be moved later.
 	UAssetManager& AssetManager = UAssetManager::Get();
-	TArray<UObject*> LoadedObjects;
-	AssetManager.GetPrimaryAssetObjectList(UAdaStatusEffectDefinition::PrimaryAssetType, LoadedObjects);
-	for (const UObject* const LoadedObject : LoadedObjects)
-	{
-		if (const UAdaStatusEffectDefinition* const LoadedStatusEffect = Cast<UAdaStatusEffectDefinition>(LoadedObject))
-		{
-			LoadedStatusEffectDefinitions.Add(LoadedStatusEffect->EffectTag, LoadedStatusEffect);
-		}
-	}
+	FStreamableDelegate StreamableDelegate = FStreamableDelegate::CreateUObject(this, &UAdaGameplayStateManager::OnStatusEffectDefsLoaded);
+	AssetManager.LoadPrimaryAssetsWithType(UAdaStatusEffectDefinition::PrimaryAssetType, TArray<FName>(), StreamableDelegate, FStreamableManager::AsyncLoadHighPriority);
 }
 
 void UAdaGameplayStateManager::BeginPlay()
@@ -94,6 +89,11 @@ const UAdaStatusEffectDefinition* UAdaGameplayStateManager::GetStatusEffectDefin
 	return *FoundDefPtr;
 }
 
+void UAdaGameplayStateManager::GetAllStatusEffectTags(TArray<FGameplayTag>& OutTags) const
+{
+	return LoadedStatusEffectDefinitions.GenerateKeyArray(OutTags);
+}
+
 const UCurveFloat* UAdaGameplayStateManager::GetCurveForModifier(const FGameplayTag CurveTag)
 {
 	const UDataRegistrySubsystem* const DataRegistrySubsystem = UDataRegistrySubsystem::Get();
@@ -132,4 +132,20 @@ void UAdaGameplayStateManager::IncrementAssignmentCounter()
 void UAdaGameplayStateManager::IncrementTickCounter()
 {
 	NextBucketToTick = (NextBucketToTick < ADA_TICK_BUCKET_COUNT - 1) ? NextBucketToTick + 1 : 0;
+}
+
+void UAdaGameplayStateManager::OnStatusEffectDefsLoaded()
+{
+	UAssetManager& AssetManager = UAssetManager::Get();
+	TArray<UObject*> LoadedObjects;
+	AssetManager.GetPrimaryAssetObjectList(UAdaStatusEffectDefinition::PrimaryAssetType, LoadedObjects);
+	for (const UObject* const LoadedObject : LoadedObjects)
+	{
+		if (const UAdaStatusEffectDefinition* const LoadedStatusEffect = Cast<UAdaStatusEffectDefinition>(LoadedObject))
+		{
+			LoadedStatusEffectDefinitions.Add(LoadedStatusEffect->EffectTag, LoadedStatusEffect);
+		}
+	}
+
+	UE_LOG(LogAdaGameplayStateManager, Display, TEXT("%hs: Loaded %i status effect definitions."), __FUNCTION__, LoadedStatusEffectDefinitions.Num());
 }

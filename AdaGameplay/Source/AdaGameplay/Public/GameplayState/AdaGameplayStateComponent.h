@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
+#include "GameFramework/AdaGameplayTagCountContainer.h"
 
 #include "GameplayState/AdaAttributeTypes.h"
 #include "GameplayState/AdaAttributeModifierTypes.h"
@@ -43,7 +44,14 @@ public:
 	FAdaAttributePtr FindAttribute(const FGameplayTag AttributeTag) const;
 
 	/// @brief	Query if an attribute exists on this component.
+	/// @param	AttributeTag	The attribute to query for.
+	/// @return Whether this component has the attribute or not.
 	bool HasAttribute(const FGameplayTag AttributeTag) const;
+
+	/// @brief	Get the value of an attribute on this component.
+	/// @param	AttributeTag	The attribute to query for.
+	/// @return The value of the attribute. Will be 0 if the attribute does not exist.
+	float GetAttributeValue(const FGameplayTag AttributeTag) const;
 
 	/// @brief	Get a delegate that broadcasts whenever the provided attribute is updated.
 	/// @param	AttributeTag	The attribute we want to listen to changes for.
@@ -80,6 +88,12 @@ public:
 	/// @return Whether the status effect was cleared successfully.
 	bool ClearStatusEffect(const FGameplayTag StatusEffectTag);
 
+	/// @brief	Attempt to find a status effect on this component by handle.
+	/// @param	StatusEffectHandle	The handle to the status effect we want to find on this component.
+	/// @return A pointer to the status effect. Will be null if invalid.
+	/// @note	The returned pointer will be null if the status effect is not found.
+	const UAdaStatusEffect* FindStatusEffect(const FAdaStatusEffectHandle& StatusEffectHandle) const;
+
 	/// @brief	Check if this component has the specified state tag.
 	/// @param	StateTag		The tag to check.
 	/// @param	bExactMatch		Whether the found tag must be exactly the same as the specified tag.
@@ -111,6 +125,7 @@ public:
 	// #TODO(Ada.Gameplay): Move to child class in game module
 	FORCEINLINE const TArray<TSharedRef<FAdaAttribute>>& GetAllAttributes() const { return Attributes; };
 	FORCEINLINE const TSparseArray<TSharedRef<FAdaAttributeModifier>>& GetAllModifiers() const { return ActiveModifiers; };
+	FORCEINLINE const FAdaGameplayTagCountContainer& GetActiveState() const { return ActiveStates; };
 
 protected:
 	// Begin UActorComponent overrides.
@@ -157,19 +172,36 @@ protected:
 	// Designed to overflow and avoid the error case of INDEX_NONE.
 	int32 GetNextModifierId();
 
+	// Get an identifier for a new status effect.
+	// Designed to overflow and avoid the error case of INDEX_NONE.
+	int32 GetNextStatusEffectId();
+
 	// Make a shareable pointer to an attribute on this component.
 	FAdaAttributePtr MakeAttributePtr(const TSharedRef<FAdaAttribute>& InAttribute) const;
 
+	// Remove the specified status effect from this component.
+	bool RemoveStatusEffect_Internal(const int32 Index);
+
 protected:
-	// #TODO(Ada.Gameplay): Reserve memory & define allocator?
+	// #TODO(Ada.Gameplay.Optimisation): Reserve memory & define allocator?
+	// This would also benefit from moving away from shared refs (see below)
 	TArray<TSharedRef<FAdaAttribute>> Attributes;
 
+	// #TODO(Ada.Gameplay.Optimisation) TSparseArray has poorer performance for iteration due to non-contiguous allocation.
+	// FAdaAttributeModifier is a nullable type and should be trivially relocatable, so we can bypass both the pointer and index
+	// instability of TArray by wrapping it in a collection type that allocates and frees instances for us.
+	// That would mean either never shrinking or implementing our own shrinking method.
+	// A generic collection type for this would prove beneficial.
 	TSparseArray<TSharedRef<FAdaAttributeModifier>> ActiveModifiers;
-	
-	TSparseArray<TStrongObjectPtr<UAdaStatusEffectDefinition>> ActiveStatusEffects;
 
-	FGameplayTagContainer ActiveStates;
+	// #TODO(Ada.Gameplay.Optimisation) TSparseArray has poorer performance for iteration due to non-contiguous allocation.
+	// See above, use a collection of UObject pointers and then we can do away with TStrongObjectPtr.
+	TSparseArray<TStrongObjectPtr<UAdaStatusEffect>> ActiveStatusEffects;
+
+	FAdaGameplayTagCountContainer ActiveStates;
+	FAdaGameplayTagCountContainer ActiveStatusEffectTags;
 
 	uint64 LatestTick = 0;
 	int32 LatestModifierId = 0;
+	int32 LatestStatusEffectId = 0;
 };

@@ -32,12 +32,12 @@ public:
 	inline static FPrimaryAssetType PrimaryAssetType = TEXT("Ada.StatusEffectDefinition");
 
 	// Tag identifying this status effect.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Definition")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Definition", Meta = (Categories = "StatusEffect.Id"))
 	FGameplayTag EffectTag = FGameplayTag::EmptyTag;
 
 	// Categories that define what this status effect is.
 	// E.g. if it damages a player's health, it may belong to the Damage category.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Definition")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Definition", Meta = (Categories = "StatusEffect.Id.Category"))
 	FGameplayTagContainer TagCategories = FGameplayTagContainer::EmptyContainer;
 
 	// Optional implementation class.
@@ -45,16 +45,20 @@ public:
 	TSubclassOf<UAdaStatusEffect> Implementation = nullptr;
 
 	// State tags to add to the target component.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State", Meta = (Categories = "StatusEffect.State"))
 	FGameplayTagContainer StateTagsToAdd = FGameplayTagContainer::EmptyContainer;
 
 	// List of tags that will prevent this status effect from being applied to the target component.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Requirements", Meta = (Categories = "StatusEffect.State"))
 	FGameplayTagContainer BlockingTags = FGameplayTagContainer::EmptyContainer;
 
 	// List of tags that must be present in order for this status effect to be applied to the target component.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Requirements", Meta = (Categories = "StatusEffect.State"))
 	FGameplayTagContainer EnablingTags = FGameplayTagContainer::EmptyContainer;
+
+	// Whether multiple instances of this status effect can be applied to the same component at the same time.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Requirements")
+	bool bCanStack = true;
 
 	// List of tags for status effects that should be cancelled by this effect's application.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")

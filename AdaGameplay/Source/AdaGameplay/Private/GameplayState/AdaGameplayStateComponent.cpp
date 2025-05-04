@@ -6,6 +6,7 @@
 #include "GameplayState/AdaGameplayStateManager.h"
 #include "Debug/AdaAssertionMacros.h"
 #include "GameplayState/AdaAttributeFunctionLibrary.h"
+#include "GameplayState/AdaStatusEffect.h"
 
 DEFINE_LOG_CATEGORY(LogAdaGameplayState);
 
@@ -19,13 +20,13 @@ void UAdaGameplayStateComponent::BeginPlay()
 	Super::BeginPlay();
 
 	const UWorld* const World = GetWorld();
-	A_ENSURE_RET(World, void(0));
+	A_ENSURE_RET(IsValid(World), void(0));
 
 	const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
-	A_ENSURE_RET(GameState, void(0));
+	A_ENSURE_RET(IsValid(GameState), void(0));
 
 	UAdaGameplayStateManager* StateManager = GameState->GetGameplayStateManager();
-	A_ENSURE_RET(StateManager, void(0));
+	A_ENSURE_RET(IsValid(StateManager), void(0));
 
 	StateManager->RegisterStateComponent(this);
 }
@@ -176,7 +177,7 @@ void UAdaGameplayStateComponent::RemoveAttribute(const FGameplayTag AttributeTag
 
 FAdaAttributePtr UAdaGameplayStateComponent::FindAttribute(const FGameplayTag AttributeTag) const
 {
-	for (TSharedRef<FAdaAttribute> Attribute : Attributes)
+	for (const TSharedRef<FAdaAttribute>& Attribute : Attributes)
 	{
 		if (Attribute.Get().AttributeTag == AttributeTag)
 		{
@@ -196,6 +197,12 @@ bool UAdaGameplayStateComponent::HasAttribute(const FGameplayTag AttributeTag) c
 	}
 	
 	return false;
+}
+
+float UAdaGameplayStateComponent::GetAttributeValue(const FGameplayTag AttributeTag) const
+{
+	const TSharedPtr<FAdaAttribute> FoundAttribute = FindAttribute_Internal(AttributeTag);
+	return FoundAttribute ? FoundAttribute->CurrentValue : 0.0f;
 }
 
 FAdaOnAttributeUpdated* UAdaGameplayStateComponent::GetDelegateForAttribute(const FGameplayTag AttributeTag)
@@ -326,10 +333,16 @@ bool UAdaGameplayStateComponent::RemoveModifier(FAdaAttributeModifierHandle& Mod
 	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifierByIndex(ModifierHandle.Index);
 	if (!ModifierOptional.IsSet())
 	{
+		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Failed to find modifier for handle %i, index %i."), __FUNCTION__, ModifierHandle.Identifier, ModifierHandle.Index);
 		return false;
 	}
 
 	TSharedRef<FAdaAttributeModifier>& Modifier = ModifierOptional.GetValue();
+	if (Modifier->GetIdentifier() != ModifierHandle.Identifier)
+	{
+		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Got identifier mismatch at index %i."), __FUNCTION__, ModifierHandle.Identifier);
+		return false;
+	}
 
 	RemoveModifier_Internal(Modifier, ModifierHandle.Index);
 	ModifierHandle.Invalidate();
@@ -339,58 +352,203 @@ bool UAdaGameplayStateComponent::RemoveModifier(FAdaAttributeModifierHandle& Mod
 
 FAdaStatusEffectHandle UAdaGameplayStateComponent::AddStatusEffect(const FGameplayTag StatusEffectTag)
 {
-	return FAdaStatusEffectHandle();
+	if (!StatusEffectTag.IsValid())
+	{
+		return FAdaStatusEffectHandle();
+	}
+
+	const UWorld* const World = GetWorld();
+	A_ENSURE_RET(IsValid(World), FAdaStatusEffectHandle());
+
+	const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
+	A_ENSURE_RET(IsValid(GameState), FAdaStatusEffectHandle());
+
+	const UAdaGameplayStateManager* const StateManager = GameState->GetGameplayStateManager();
+	A_ENSURE_RET(IsValid(StateManager), FAdaStatusEffectHandle());
+
+	const UAdaStatusEffectDefinition* const StatusEffectDef = StateManager->GetStatusEffectDefinition(StatusEffectTag);
+	A_ENSURE_RET(IsValid(StatusEffectDef), FAdaStatusEffectHandle());
+
+	// Prevent activation if we already have an active instance of this effect and don't allow for stacking.
+	if (ActiveStatusEffectTags.HasMatchingGameplayTag(StatusEffectTag) && !StatusEffectDef->bCanStack)
+	{
+		return FAdaStatusEffectHandle();
+	}
+
+	// Check we don't have any tags that would block this effect.
+	if (ActiveStates.HasAnyMatchingGameplayTags(StatusEffectDef->BlockingTags))
+	{
+		return FAdaStatusEffectHandle();
+	}
+
+	// Check we have all of the tags that this effect requires for activation.
+	if (!ActiveStates.HasAllMatchingGameplayTags(StatusEffectDef->EnablingTags))
+	{
+		return FAdaStatusEffectHandle();
+	}
+
+	TStrongObjectPtr<UAdaStatusEffect> NewStatusEffect = TStrongObjectPtr(NewObject<UAdaStatusEffect>());
+	A_ENSURE_RET(IsValid(NewStatusEffect.Get()), FAdaStatusEffectHandle());
+
+	NewStatusEffect->EffectTag = StatusEffectTag;
+	NewStatusEffect->EffectId = GetNextStatusEffectId();
+	
+	for (const auto& [AttributeTag, ModifierSpecRef] : StatusEffectDef->Modifiers)
+	{
+		// Copy the modifier spec from the effect definition.
+		// We're going to modify the spec itself, so we don't want to propagate those changes into the
+		// effect definition by mistake.
+		FAdaAttributeModifierSpec EffectModifierSpec = ModifierSpecRef;
+		EffectModifierSpec.SetEffectData(NewStatusEffect.Get());
+
+		FAdaAttributeModifierHandle ModifierHandle = ModifyAttribute(AttributeTag, EffectModifierSpec);
+		if (EffectModifierSpec.ApplicationType != EAdaAttributeModApplicationType::Instant)
+		{
+			NewStatusEffect->ActiveModifierHandles.Add(ModifierHandle);
+		}
+	}
+
+	FAdaStatusEffectHandle NewStatusEffectHandle = FAdaStatusEffectHandle();
+	NewStatusEffectHandle.OwningStateComponentWeak = this;
+	NewStatusEffectHandle.Identifier = NewStatusEffect->EffectId;
+	NewStatusEffectHandle.Index = ActiveStatusEffects.Add(MoveTemp(NewStatusEffect));
+
+	// Add a new instance of the effect to our explicit tag tracking container.
+	ActiveStatusEffectTags.UpdateTagCount(StatusEffectTag, 1);
+
+	// Update the state on this component with the state from the effect.
+	ActiveStates.UpdateTagCount(StatusEffectDef->StateTagsToAdd, 1);
+	
+	// Cancel any relevant effects
+	if (!StatusEffectDef->EffectsToCancel.IsEmpty() || !StatusEffectDef->EffectTypesToCancel.IsEmpty())
+	{
+		TArray<int32> IndicesToRemove;
+		for (auto It = ActiveStatusEffects.CreateConstIterator(); It; ++It)
+		{
+			int32 Index = It.GetIndex();
+			const TStrongObjectPtr<UAdaStatusEffect> StatusEffectPtr = *It;
+			A_ENSURE_RET(StatusEffectPtr, FAdaStatusEffectHandle());
+			
+			if (StatusEffectDef->EffectsToCancel.HasAny(StatusEffectPtr->EffectTag.GetSingleTagContainer()))
+			{
+				IndicesToRemove.Add(Index);
+			}
+			else if (StatusEffectDef->EffectTypesToCancel.HasAny(StatusEffectPtr->TagCategories))
+			{
+				IndicesToRemove.Add(Index);
+			}
+		}
+
+		for (int32 RemoveIndices : IndicesToRemove)
+		{
+			ActiveStatusEffects.RemoveAt(RemoveIndices);
+		}
+	}
+	
+	return NewStatusEffectHandle;
 }
 
 bool UAdaGameplayStateComponent::RemoveStatusEffect(FAdaStatusEffectHandle& StatusEffectHandle)
 {
-	// #TODO(Ada_Gameplay): Implement
-	return false;
+	if (StatusEffectHandle.Identifier == INDEX_NONE || StatusEffectHandle.Index == INDEX_NONE)
+	{
+		return false;
+	}
+
+	const bool bSuccess = RemoveStatusEffect_Internal(StatusEffectHandle.Index);
+	if (bSuccess)
+	{
+		StatusEffectHandle.Invalidate();
+	}
+	
+	return bSuccess;
 }
 
 bool UAdaGameplayStateComponent::ClearStatusEffect(const FGameplayTag StatusEffectTag)
 {
-	// #TODO(Ada_Gameplay): Implement
-	return false;
+	TArray<int32> IndicesToRemove;
+	for (auto It = ActiveStatusEffects.CreateConstIterator(); It; ++It)
+	{
+		int32 Index = It.GetIndex();
+		const TStrongObjectPtr<UAdaStatusEffect> StatusEffectPtr = *It;
+		
+		const UAdaStatusEffect* const StatusEffect = StatusEffectPtr.Get();
+		if (!A_ENSURE(IsValid(StatusEffect)))
+		{
+			continue;
+		}
+
+		if (StatusEffect->GetEffectTag() == StatusEffectTag)
+		{
+			IndicesToRemove.Add(Index);
+		}
+	}
+
+	bool bSuccess = true;
+	for (const int32 Index : IndicesToRemove)
+	{
+		bSuccess &= RemoveStatusEffect_Internal(Index);
+	}
+	
+	return bSuccess;
+}
+
+const UAdaStatusEffect* UAdaGameplayStateComponent::FindStatusEffect(const FAdaStatusEffectHandle& StatusEffectHandle) const
+{
+	if (StatusEffectHandle.Identifier == INDEX_NONE || StatusEffectHandle.Index == INDEX_NONE)
+	{
+		return nullptr;
+	}
+
+	if (!ActiveStatusEffects.IsValidIndex(StatusEffectHandle.Index))
+	{
+		return nullptr;
+	}
+
+	const UAdaStatusEffect* const StatusEffect = ActiveStatusEffects[StatusEffectHandle.Index].Get();
+	if (!IsValid(StatusEffect))
+	{
+		return nullptr;
+	}
+	
+	return StatusEffect;
 }
 
 bool UAdaGameplayStateComponent::HasState(const FGameplayTag StateTag, bool bExactMatch) const
 {
-	return bExactMatch ? ActiveStates.HasTagExact(StateTag) : ActiveStates.HasTag(StateTag);
+	const FGameplayTagContainer& ExplicitStateTags = ActiveStates.GetTags();
+	return bExactMatch ? ExplicitStateTags.HasTagExact(StateTag) : ExplicitStateTags.HasTag(StateTag);
 }
 
 bool UAdaGameplayStateComponent::HasAnyState(const FGameplayTagContainer& StateTags, bool bExactMatch) const
 {
-	return bExactMatch ? ActiveStates.HasAnyExact(StateTags) : ActiveStates.HasAny(StateTags);
+	const FGameplayTagContainer& ExplicitStateTags = ActiveStates.GetTags();
+	return bExactMatch ? ExplicitStateTags.HasAnyExact(StateTags) : ExplicitStateTags.HasAny(StateTags);
 }
 
 bool UAdaGameplayStateComponent::HasAllState(const FGameplayTagContainer& StateTags, bool bExactMatch) const
 {
-	return bExactMatch ? ActiveStates.HasAllExact(StateTags) : ActiveStates.HasAll(StateTags);
+	const FGameplayTagContainer& ExplicitStateTags = ActiveStates.GetTags();
+	return bExactMatch ? ExplicitStateTags.HasAllExact(StateTags) : ExplicitStateTags.HasAll(StateTags);
 }
 
 bool UAdaGameplayStateComponent::AddStateTag(const FGameplayTag StateTag)
 {
 	A_ENSURE_MSG_RET(StateTag.IsValid(), false, TEXT("%hs: Attempted to add invalid state tag."), __FUNCTION__);
 	
-	if (ActiveStates.HasTagExact(StateTag))
-	{
-		return false;
-	}
-	
-	ActiveStates.AddTag(StateTag);
+	ActiveStates.UpdateTagCount(StateTag, 1);
 
 	return true;
 }
 
 bool UAdaGameplayStateComponent::RemoveStateTag(const FGameplayTag StateTag)
 {
-	if (!ActiveStates.HasTagExact(StateTag))
+	if (!ActiveStates.HasMatchingGameplayTag(StateTag))
 	{
 		return false;
 	}
 	
-	return ActiveStates.RemoveTag(StateTag);
+	return ActiveStates.UpdateTagCount(StateTag, -1);;
 }
 
 TSharedPtr<FAdaAttribute> UAdaGameplayStateComponent::FindAttribute_Internal(const FGameplayTag AttributeTag)
@@ -488,6 +646,25 @@ bool UAdaGameplayStateComponent::RemoveModifier_Internal(TSharedRef<FAdaAttribut
 		else
 		{
 			UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Failed to get modifying attribute %s to attribute %s on modifier removal."), __FUNCTION__, *Modifier->ModifyingAttribute.ToString(), *Modifier->AffectedAttribute.ToString());
+		}
+	}
+
+	if (Modifier->ParentStatusEffect.IsValid())
+	{
+		int32 FoundHandleIndex = INDEX_NONE;
+		for (int32 ModifierIndex = 0; ModifierIndex < Modifier->ParentStatusEffect->ActiveModifierHandles.Num(); ModifierIndex++)
+		{
+			FAdaAttributeModifierHandle& Handle = Modifier->ParentStatusEffect->ActiveModifierHandles[ModifierIndex];
+			if (Handle.Identifier == Modifier->Identifier)
+			{
+				FoundHandleIndex = ModifierIndex;
+				break;
+			}
+		}
+
+		if (FoundHandleIndex != INDEX_NONE)
+		{
+			Modifier->ParentStatusEffect->ActiveModifierHandles.RemoveAt(FoundHandleIndex);
 		}
 	}
 
@@ -765,7 +942,56 @@ int32 UAdaGameplayStateComponent::GetNextModifierId()
 	return LatestModifierId;
 }
 
+int32 UAdaGameplayStateComponent::GetNextStatusEffectId()
+{
+	LatestStatusEffectId++;
+	if (LatestStatusEffectId == INDEX_NONE)
+	{
+		LatestStatusEffectId = 0;
+	}
+
+	return LatestStatusEffectId;
+}
+
 FAdaAttributePtr UAdaGameplayStateComponent::MakeAttributePtr(const TSharedRef<FAdaAttribute>& InAttribute) const
 {
 	return FAdaAttributePtr(InAttribute, this);
+}
+
+bool UAdaGameplayStateComponent::RemoveStatusEffect_Internal(const int32 Index)
+{
+	if (!ActiveStatusEffects.IsValidIndex(Index))
+	{
+		return false;
+	}
+	
+	UAdaStatusEffect* StatusEffect = ActiveStatusEffects[Index].Get();
+	A_ENSURE_RET(IsValid(StatusEffect), false);
+
+	const FGameplayTag StatusEffectTag = StatusEffect->GetEffectTag();
+
+	const UWorld* const World = GetWorld();
+	A_ENSURE_RET(IsValid(World), false);
+
+	const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
+	A_ENSURE_RET(IsValid(GameState), false);
+
+	const UAdaGameplayStateManager* const StateManager = GameState->GetGameplayStateManager();
+	A_ENSURE_RET(IsValid(StateManager), false);
+
+	const UAdaStatusEffectDefinition* const StatusEffectDef = StateManager->GetStatusEffectDefinition(StatusEffectTag);
+	A_ENSURE_RET(IsValid(StatusEffectDef), false);
+	
+	ActiveStates.UpdateTagCount(StatusEffectDef->StateTagsToAdd, -1);
+	ActiveStatusEffectTags.UpdateTagCount(StatusEffectTag, -1);
+
+	// Reverse iteration as we'll be modifying the active modifier handles array as we remove modifiers.
+	for (uint32 i = StatusEffect->ActiveModifierHandles.Num() - 1; i == 0; i--)
+	{
+		RemoveModifier(StatusEffect->ActiveModifierHandles[i]);
+	}
+	
+	ActiveStatusEffects.RemoveAt(Index);
+
+	return true;
 }
