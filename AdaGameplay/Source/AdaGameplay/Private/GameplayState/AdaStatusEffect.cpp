@@ -2,13 +2,23 @@
 
 #include "GameplayState/AdaStatusEffect.h"
 
-bool UAdaStatusEffect::ShouldRecalculateModifier_Implementation(const FGameplayTag AttributeTag)
+bool UAdaStatusEffect::ShouldRecalculateModifier(const FGameplayTag AttributeTag)
+{
+	return ShouldRecalculateModifier_BP(AttributeTag);
+}
+
+bool UAdaStatusEffect::ShouldRecalculateModifier_BP_Implementation(const FGameplayTag AttributeTag)
 {
 	checkNoEntry();
 	return false;
 }
 
-float UAdaStatusEffect::RecalculateModifier_Implementation(const FGameplayTag AttributeTag)
+float UAdaStatusEffect::RecalculateModifier(const FGameplayTag AttributeTag)
+{
+	return RecalculateModifier_BP(AttributeTag);
+}
+
+float UAdaStatusEffect::RecalculateModifier_BP_Implementation(const FGameplayTag AttributeTag)
 {
 	checkNoEntry();
 	return 0.0f;

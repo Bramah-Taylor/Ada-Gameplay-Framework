@@ -20,7 +20,7 @@ public:
 	// Inhibit modification of an attribute.
 	static FAdaAttributeModifierHandle InhibitAttribute(UAdaGameplayStateComponent& StateComponent, const FGameplayTag AttributeTag);
 
-	static bool IsModifierValid(const FAdaAttributeModifierSpec& Modifier);
+	static bool IsModifierValid(const FAdaAttributeModifierSpec& Modifier, TArray<FString>& OutErrors, const bool bEditorContext = false);
 	static bool IsModifierClampingValid(const FAdaAttributeModifierSpec& Modifier);
 
 	// Create an attribute modifier delegate for a modifier which should be recalculated dynamically via delegate functions.

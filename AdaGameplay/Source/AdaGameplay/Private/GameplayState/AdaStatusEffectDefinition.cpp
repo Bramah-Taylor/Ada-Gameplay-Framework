@@ -30,9 +30,15 @@ EDataValidationResult UAdaStatusEffectDefinition::IsDataValid(FDataValidationCon
 			Result = EDataValidationResult::Invalid;
 		}
 
-		if (!UAdaAttributeFunctionLibrary::IsModifierValid(ModifierSpec))
+		TArray<FString> Errors;
+		if (!UAdaAttributeFunctionLibrary::IsModifierValid(ModifierSpec, Errors, true))
 		{
 			Context.AddError(FText::Format(LOCTEXT("AttributeTag", "Invalid modifier setup for modifier to attribute {0}."), FText::FromString(AttributeTag.ToString())));
+			for (const FString& ErrorString : Errors)
+			{
+				Context.AddError(FText::FromString(ErrorString));
+			}
+			
 			Result = EDataValidationResult::Invalid;
 		}
 	}

@@ -22,11 +22,19 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FGameplayTag GetEffectTag() const { return EffectTag; };
 
-	UFUNCTION(BlueprintNativeEvent)
+	UFUNCTION()
 	bool ShouldRecalculateModifier(const FGameplayTag AttributeTag);
 
 	UFUNCTION(BlueprintNativeEvent)
+	bool ShouldRecalculateModifier_BP(const FGameplayTag AttributeTag);
+	bool ShouldRecalculateModifier_BP_Implementation(const FGameplayTag AttributeTag);
+
+	UFUNCTION()
 	float RecalculateModifier(const FGameplayTag AttributeTag);
+
+	UFUNCTION(BlueprintNativeEvent)
+	float RecalculateModifier_BP(const FGameplayTag AttributeTag);
+	float RecalculateModifier_BP_Implementation(const FGameplayTag AttributeTag);
 
 protected:
 	UPROPERTY()

@@ -234,8 +234,15 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 		return OutHandle;
 	}
 
-	if (!UAdaAttributeFunctionLibrary::IsModifierValid(ModifierToApply))
+	TArray<FString> Errors;
+	if (!UAdaAttributeFunctionLibrary::IsModifierValid(ModifierToApply, Errors))
 	{
+		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Invalid modifier for attribute %s:"), __FUNCTION__, *AttributeTag.ToString());
+		for (const FString& ErrorString : Errors)
+		{
+			UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: %s"), __FUNCTION__, *ErrorString);
+		}
+		
 		return OutHandle;
 	}
 
@@ -387,7 +394,8 @@ FAdaStatusEffectHandle UAdaGameplayStateComponent::AddStatusEffect(const FGamepl
 		return FAdaStatusEffectHandle();
 	}
 
-	TStrongObjectPtr<UAdaStatusEffect> NewStatusEffect = TStrongObjectPtr(NewObject<UAdaStatusEffect>());
+	const UClass* Implementation = IsValid(StatusEffectDef->Implementation) ? StatusEffectDef->Implementation.Get() : UAdaStatusEffect::StaticClass();
+	TStrongObjectPtr<UAdaStatusEffect> NewStatusEffect = TStrongObjectPtr(NewObject<UAdaStatusEffect>(this, Implementation));
 	A_ENSURE_RET(IsValid(NewStatusEffect.Get()), FAdaStatusEffectHandle());
 
 	NewStatusEffect->EffectTag = StatusEffectTag;

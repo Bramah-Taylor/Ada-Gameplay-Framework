@@ -145,8 +145,7 @@ bool FAdaAttributeModifier::ShouldRecalculate() const
 		}
 		case EAdaAttributeModCalcType::SetByEffect:
 		{
-			// #TODO: Will eventually query the effect here
-			return false;
+			[[fallthrough]];
 		}
 		case EAdaAttributeModCalcType::SetByDelegate:
 		{
@@ -215,17 +214,16 @@ float FAdaAttributeModifier::CalculateValue()
 			// Updated externally.
 			return ModifierValue;
 		}
+		case EAdaAttributeModCalcType::SetByEffect:
+		{
+			[[fallthrough]];
+		}
 		case EAdaAttributeModCalcType::SetByDelegate:
 		{
 			A_ENSURE_RET(ModifierDelegate.bIsSet, ModifierValue);
 			ModifierValue = ModifierDelegate.RecalculateModifierFunc(AffectedAttribute);
 			return ModifierValue;
 		}
-		case EAdaAttributeModCalcType::SetByEffect:
-        {
-        	// #TODO(Ada.Gameplay): Implement.
-        	return ModifierValue;
-        }
 		case EAdaAttributeModCalcType::SetByData:
 		{
 			A_ENSURE_MSG_RET(ModifierCurve.IsValid(), ModifierValue, TEXT("%hs: Invalid Curve Float asset for modifier %s."), __FUNCTION__, *ModifierCurveTag.ToString());
