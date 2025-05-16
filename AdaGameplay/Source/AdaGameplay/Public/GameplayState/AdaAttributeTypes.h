@@ -4,6 +4,8 @@
 
 #include "GameplayTagContainer.h"
 
+#include "GameplayState/AdaAttributeModifierTypes.h"
+
 #include "AdaAttributeTypes.generated.h"
 
 struct FAdaAttributeModifier;
@@ -44,7 +46,7 @@ struct ADAGAMEPLAY_API FAdaAttribute
 	
 public:
 	FAdaAttribute() = default;
-	FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitParams& InitParams);
+	FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitParams& InitParams, const int32 NewId);
 	
 	FORCEINLINE float GetBaseValue() const { return BaseValue; };
 	FORCEINLINE float GetCurrentValue() const { return CurrentValue; };
@@ -52,6 +54,7 @@ public:
 	FORCEINLINE float GetMinValue(const bool bUseBase = false) const { return bUseBase ? BaseClampingValues.X : CurrentClampingValues.X; };
 	FORCEINLINE float GetModifierCount() const { return ActiveModifiers.Num(); };
 	FORCEINLINE float GetDependencyCount() const { return AttributeDependencies.Num(); };
+	FORCEINLINE int32 GetIdentifier() const { return Identifier; };
 
 public:
 	// The gameplay tag representing this attribute.
@@ -86,14 +89,19 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	bool bUsesClamping = false;
 
+	// The identifier for this attribute.
+	// Used to check validity of attribute handles.
+	UPROPERTY(BlueprintReadOnly)
+	int32 Identifier = INDEX_NONE;
+
 private:
-	// An array of weak pointers to modifiers that are currently being applied to this attribute.
-	TArray<TWeakPtr<FAdaAttributeModifier>> ActiveModifiers;
+	// An array of handles to modifiers that are currently being applied to this attribute.
+	TArray<FAdaAttributeModifierHandle> ActiveModifiers;
 
-	// Weak pointer to an overriding modifier if one is currently being applied to this attribute.
-	TWeakPtr<FAdaAttributeModifier> OverridingModifier = nullptr;
+	// Handle to an overriding modifier if one is currently being applied to this attribute.
+	FAdaAttributeModifierHandle OverridingModifier;
 
-	// Map of dependencies to attribute indices on the owning gameplay state component.
+	// Map of dependencies to modifier indices on the owning gameplay state component.
 	TMap<FGameplayTag, int32> AttributeDependencies;
 
 	// Whether this attribute is currently pending recalculation.
@@ -103,22 +111,19 @@ private:
 	bool bIsOverridden = false;
 };
 
-// Wrapper for a pointer to an attribute.
-// Provides additional functionality for fixing up an invalid state in situations where we've lost the weak pointer
-// but still want to maintain the wrapper for whatever reason.
+// Handle to an attribute on a gameplay state component.
 USTRUCT()
-struct ADAGAMEPLAY_API FAdaAttributePtr
+struct ADAGAMEPLAY_API FAdaAttributeHandle
 {
 	GENERATED_BODY()
 
 	friend class UAdaGameplayStateComponent;
 
 public:
-	FAdaAttributePtr() = default;
-	FAdaAttributePtr(const TSharedRef<FAdaAttribute>& InAttribute, const UAdaGameplayStateComponent* const OwningStateComponent);
+	FAdaAttributeHandle() = default;
+	FAdaAttributeHandle(const UAdaGameplayStateComponent* const Owner, const FGameplayTag NewTag, const int32 NewIndex, const int32 NewId);
 	
-	bool IsValid() const;
-	bool TryGetFromOwner();
+	bool IsValid(bool bValidateOwner = false) const;
 
 	const FAdaAttribute* Get() const;
 
@@ -129,6 +134,12 @@ private:
 	void Invalidate();
 
 private:
-	TWeakPtr<FAdaAttribute> AttributeWeak = nullptr;
+	// The component that owns this attribute.
 	TWeakObjectPtr<const UAdaGameplayStateComponent> OwningStateComponentWeak = nullptr;
+
+	// The index of this attributes in the owning component's attribute array, if valid.
+	int32 Index = INDEX_NONE;
+
+	// the identifier of this attribute on the owning component. We use this to check validity with the attribute in the given index.
+	int32 Identifier = INDEX_NONE;
 };

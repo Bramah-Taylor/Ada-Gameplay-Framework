@@ -7,8 +7,8 @@
 
 FAdaAttributeModifierHandle UAdaAttributeFunctionLibrary::InhibitAttribute(UAdaGameplayStateComponent& StateComponent, const FGameplayTag AttributeTag)
 {
-	TSharedPtr<FAdaAttribute> FoundAttribute = StateComponent.FindAttribute_Internal(AttributeTag);
-	if (!FoundAttribute.IsValid())
+	FAdaAttribute* FoundAttribute = StateComponent.FindAttribute_Internal(AttributeTag);
+	if (!FoundAttribute)
 	{
 		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Invalid attribute %s"), __FUNCTION__, *AttributeTag.ToString());
 		return FAdaAttributeModifierHandle();

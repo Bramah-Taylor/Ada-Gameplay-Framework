@@ -278,7 +278,7 @@ void FAdaAttributeModifier::SetModifierCurve(const UCurveFloat* const InModifier
 	ModifierCurve = InModifierCurve;
 }
 
-FAdaAttributeModifierHandle::FAdaAttributeModifierHandle(UAdaGameplayStateComponent* Owner, const EAdaAttributeModApplicationType Type, const int32 NewIndex, const int32 NewId) :
+FAdaAttributeModifierHandle::FAdaAttributeModifierHandle(UAdaGameplayStateComponent* const Owner, const int32 NewIndex, const int32 NewId) :
 	OwningStateComponentWeak(Owner),
 	Index(NewIndex),
 	Identifier(NewId)
@@ -301,14 +301,13 @@ bool FAdaAttributeModifierHandle::IsValid(bool bValidateOwner) const
 	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
 	A_VALIDATE_OBJ(OwningStateComponent, false);
 
-	const TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifierByIndex(Index);
-	if (!ModifierOptional.IsSet())
+	const FAdaAttributeModifier* const Modifier = OwningStateComponent->FindModifierByIndex(Index);
+	if (!Modifier)
 	{
 		return false;
 	}
 
-	const TSharedRef<FAdaAttributeModifier> ModifierRef = ModifierOptional.GetValue();
-	return ModifierRef->GetIdentifier() == Identifier;
+	return Modifier->GetIdentifier() == Identifier;
 }
 
 void FAdaAttributeModifierHandle::Invalidate()
@@ -318,44 +317,12 @@ void FAdaAttributeModifierHandle::Invalidate()
 	Identifier = INDEX_NONE;
 }
 
-FAdaAttributeModifier* FAdaAttributeModifierHandle::Get()
-{
-	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
-	A_VALIDATE_OBJ(OwningStateComponent, nullptr);
-
-	const TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifierByIndex(Index);
-	if (!ModifierOptional.IsSet())
-	{
-		return nullptr;
-	}
-
-	const TSharedRef<FAdaAttributeModifier> ModifierRef = ModifierOptional.GetValue();
-	if (ModifierRef->GetIdentifier() != Identifier)
-	{
-		return nullptr;
-	}
-
-	return &*ModifierRef;
-}
-
 const FAdaAttributeModifier* FAdaAttributeModifierHandle::Get() const
 {
 	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
 	A_VALIDATE_OBJ(OwningStateComponent, nullptr);
 
-	const TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = OwningStateComponent->FindModifierByIndex(Index);
-	if (!ModifierOptional.IsSet())
-	{
-		return nullptr;
-	}
-
-	const TSharedRef<FAdaAttributeModifier> ModifierRef = ModifierOptional.GetValue();
-	if (ModifierRef->GetIdentifier() != Identifier)
-	{
-		return nullptr;
-	}
-
-	return ModifierRef.ToSharedPtr().Get();
+	return OwningStateComponent->FindModifierByIndex(Index);
 }
 
 bool FAdaAttributeModifierHandle::Remove()

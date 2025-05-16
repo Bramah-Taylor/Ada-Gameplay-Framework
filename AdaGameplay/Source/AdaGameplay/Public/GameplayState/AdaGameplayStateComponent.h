@@ -19,6 +19,7 @@ class ADAGAMEPLAY_API UAdaGameplayStateComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
+	friend struct FAdaAttributeHandle;
 	friend struct FAdaAttributeModifierHandle;
 	friend class UAdaAttributeFunctionLibrary;
 	friend class UAdaGameplayStateManager;
@@ -31,17 +32,17 @@ public:
 	/// @param	InitParams		Parameters for setting the initial state of this attribute.
 	/// @return A pointer to the attribute.
 	/// @note	The returned pointer will be null if this attribute already exists on the component.
-	FAdaAttributePtr AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams);
+	FAdaAttributeHandle AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams);
 
 	/// @brief	Remove the provided attribute from this component.
-	/// @param	AttributeTag	The attribute to remove.
+	/// @param	AttributeHandle	The attribute to remove.
 	/// @warning This remains untested. Use at your own risk.
-	void RemoveAttribute(const FGameplayTag AttributeTag);
+	void RemoveAttribute(const FAdaAttributeHandle& AttributeHandle);
 
 	/// @brief Find the given attribute on this component.
 	/// @param	AttributeTag	The attribute to find.
 	/// @return A pointer to the attribute. Will be null if the attribute is not found.
-	FAdaAttributePtr FindAttribute(const FGameplayTag AttributeTag) const;
+	FAdaAttributeHandle FindAttribute(const FGameplayTag AttributeTag) const;
 
 	/// @brief	Query if an attribute exists on this component.
 	/// @param	AttributeTag	The attribute to query for.
@@ -123,8 +124,8 @@ public:
 	bool RemoveStateTag(const FGameplayTag StateTag);
 
 	// #TODO(Ada.Gameplay): Move to child class in game module
-	FORCEINLINE const TArray<TSharedRef<FAdaAttribute>>& GetAllAttributes() const { return Attributes; };
-	FORCEINLINE const TSparseArray<TSharedRef<FAdaAttributeModifier>>& GetAllModifiers() const { return ActiveModifiers; };
+	FORCEINLINE const TSparseArray<FAdaAttribute>& GetAllAttributes() const { return Attributes; };
+	FORCEINLINE const TSparseArray<FAdaAttributeModifier>& GetAllModifiers() const { return ActiveModifiers; };
 	FORCEINLINE const FAdaGameplayTagCountContainer& GetActiveState() const { return ActiveStates; };
 
 protected:
@@ -136,28 +137,28 @@ protected:
 	void FixedTick(const uint64& CurrentTick);
 
 	// Utility functions for finding attributes on this component.
-	TSharedPtr<FAdaAttribute> FindAttribute_Internal(const FGameplayTag AttributeTag);
-	const TSharedPtr<FAdaAttribute> FindAttribute_Internal(const FGameplayTag AttributeTag) const;
+	FAdaAttribute* FindAttribute_Internal(const FGameplayTag AttributeTag);
+	const FAdaAttribute* FindAttribute_Internal(const FGameplayTag AttributeTag) const;
 
-	// Specific utility function for finding an attribute when we need to use the actual shared ref instead of a pointer.
-	TOptional<TSharedRef<FAdaAttribute>> FindAttributeRef_Internal(const FGameplayTag AttributeTag);
+	FAdaAttribute* FindAttributeByIndex(int32 Index);
+	const FAdaAttribute* FindAttributeByIndex(int32 Index) const;
 
 	// Utility functions for finding attribute modifiers by their array index.
-	TOptional<TSharedRef<FAdaAttributeModifier>> FindModifierByIndex(int32 Index);
-	const TOptional<TSharedRef<FAdaAttributeModifier>> FindModifierByIndex(int32 Index) const;
+	FAdaAttributeModifier* FindModifierByIndex(int32 Index);
+	const FAdaAttributeModifier*FindModifierByIndex(int32 Index) const;
 
 	// Utility function for removing a modifier we know the index of.
 	bool RemoveModifierByIndex(int32 Index);
 
 	// Remove the specified modifier from all references on this component. That includes the modifier array,
 	// any references to this modifier on attributes, and any attribute dependency references.
-	bool RemoveModifier_Internal(TSharedRef<FAdaAttributeModifier>& Modifier, int32 Index);
+	bool RemoveModifier_Internal(FAdaAttributeModifier& Modifier, int32 Index);
 
 	// Immediately apply an instant, permanent modifier to this attribute.
 	void ApplyImmediateModifier(FAdaAttribute& Attribute, const FAdaAttributeModifierSpec& ModifierToApply);
 
 	// Apply a modifier that overrides the given attribute.
-	void ApplyOverridingModifier(FAdaAttribute& Attribute, const TSharedRef<FAdaAttributeModifier>& Modifier);
+	void ApplyOverridingModifier(FAdaAttribute& Attribute, const FAdaAttributeModifier& Modifier, const int32 ModifierIndex);
 
 	// Recalculate the value of an attribute from its modifiers.
 	void RecalculateAttribute(FAdaAttribute& Attribute, const uint64& CurrentTick);
@@ -168,6 +169,10 @@ protected:
 	// Let attributes, effects and delegate subscribers know an attribute's value has changed.
 	void NotifyAttributeChanged(FAdaAttribute& Attribute, const float OldBase, const float OldCurrent);
 
+	// Get an identifier for a new attribute.
+	// Designed to overflow and avoid the error case of INDEX_NONE.
+	int32 GetNextAttributeId();
+
 	// Get an identifier for a new modifier.
 	// Designed to overflow and avoid the error case of INDEX_NONE.
 	int32 GetNextModifierId();
@@ -176,23 +181,19 @@ protected:
 	// Designed to overflow and avoid the error case of INDEX_NONE.
 	int32 GetNextStatusEffectId();
 
-	// Make a shareable pointer to an attribute on this component.
-	FAdaAttributePtr MakeAttributePtr(const TSharedRef<FAdaAttribute>& InAttribute) const;
-
 	// Remove the specified status effect from this component.
 	bool RemoveStatusEffect_Internal(const int32 Index);
 
 protected:
 	// #TODO(Ada.Gameplay.Optimisation): Reserve memory & define allocator?
-	// This would also benefit from moving away from shared refs (see below)
-	TArray<TSharedRef<FAdaAttribute>> Attributes;
+	TSparseArray<FAdaAttribute> Attributes;
 
 	// #TODO(Ada.Gameplay.Optimisation) TSparseArray has poorer performance for iteration due to non-contiguous allocation.
 	// FAdaAttributeModifier is a nullable type and should be trivially relocatable, so we can bypass both the pointer and index
 	// instability of TArray by wrapping it in a collection type that allocates and frees instances for us.
 	// That would mean either never shrinking or implementing our own shrinking method.
 	// A generic collection type for this would prove beneficial.
-	TSparseArray<TSharedRef<FAdaAttributeModifier>> ActiveModifiers;
+	TSparseArray<FAdaAttributeModifier> ActiveModifiers;
 
 	// #TODO(Ada.Gameplay.Optimisation) TSparseArray has poorer performance for iteration due to non-contiguous allocation.
 	// See above, use a collection of UObject pointers and then we can do away with TStrongObjectPtr.

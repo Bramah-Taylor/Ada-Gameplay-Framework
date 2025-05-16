@@ -242,6 +242,7 @@ protected:
 	void SetModifyingAttribute(const FAdaAttribute& InAttribute);
 	void SetModifierCurve(const UCurveFloat* const InModifierCurve);
 
+	// #TODO: Replace with attribute handles?
 	FGameplayTag AffectedAttribute = FGameplayTag::EmptyTag;
 	FGameplayTag ModifyingAttribute = FGameplayTag::EmptyTag;
 	
@@ -321,12 +322,11 @@ struct ADAGAMEPLAY_API FAdaAttributeModifierHandle
 
 public:
 	FAdaAttributeModifierHandle() = default;
-	FAdaAttributeModifierHandle(UAdaGameplayStateComponent* Owner, const EAdaAttributeModApplicationType Type, const int32 NewIndex, const int32 NewId);
+	FAdaAttributeModifierHandle(UAdaGameplayStateComponent* const Owner, const int32 NewIndex, const int32 NewId);
 	
 	bool IsValid(bool bValidateOwner = false) const;
 	void Invalidate();
 
-	FAdaAttributeModifier* Get();
 	const FAdaAttributeModifier* Get() const;
 
 	bool Remove();

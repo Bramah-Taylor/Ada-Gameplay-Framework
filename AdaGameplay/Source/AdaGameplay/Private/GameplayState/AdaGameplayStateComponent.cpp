@@ -55,8 +55,8 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentTick)
 	const UWorld* const World = GetWorld();
 	A_VALIDATE_OBJ(World, void(0));
 
-	TArray<TPair<TSharedRef<FAdaAttributeModifier>, uint32>> ExpiredModifiers;
-	TArray<TPair<TSharedRef<FAdaAttributeModifier>, uint32>> PostTick_ExpiredModifiers;
+	TArray<TPair<FAdaAttributeModifier&, uint32>> ExpiredModifiers;
+	TArray<TPair<FAdaAttributeModifier&, uint32>> PostTick_ExpiredModifiers;
 
 	// Maintain internal tick reference.
 	LatestTick = CurrentTick;
@@ -65,20 +65,20 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentTick)
 	{
 		int32 Index = It.GetIndex();
 		
-		TSharedRef<FAdaAttributeModifier> ModifierRef = *It;
-		FAdaAttributeModifier& Modifier = ModifierRef.Get();
+		FAdaAttributeModifier& Modifier = *It;
 
 		if (!Modifier.CanApply(CurrentTick))
 		{
 			continue;
 		}
 
-		TSharedPtr<FAdaAttribute> FoundAttribute = FindAttribute_Internal(Modifier.AffectedAttribute);
-		if (!FoundAttribute.IsValid())
+		// #TODO: Replace with index from handle?
+		FAdaAttribute* FoundAttribute = FindAttribute_Internal(Modifier.AffectedAttribute);
+		if (!FoundAttribute)
 		{
 			UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Invalid periodic modifier for attribute %s"), __FUNCTION__,
 			       *Modifier.AffectedAttribute.ToString());
-			ExpiredModifiers.Add({ModifierRef, Index});
+			ExpiredModifiers.Add({Modifier, Index});
 			continue;
 		}
 
@@ -87,11 +87,11 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentTick)
 		{
 			if (Modifier.bShouldApplyOnRemoval)
 			{
-				PostTick_ExpiredModifiers.Add({ModifierRef, Index});
+				PostTick_ExpiredModifiers.Add({Modifier, Index});
 			}
 			else
 			{
-				ExpiredModifiers.Add({ModifierRef, Index});
+				ExpiredModifiers.Add({Modifier, Index});
 				bTryRecalculate = false;
 			}
 		}
@@ -129,9 +129,9 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentTick)
 	}
 
 	// Update attributes.
-	for (TSharedRef<FAdaAttribute>& AttributeRef : Attributes)
+	for (auto It = Attributes.CreateIterator(); It; ++It)
 	{
-		FAdaAttribute& Attribute = AttributeRef.Get();
+		FAdaAttribute& Attribute = *It;
 		if (Attribute.bIsDirty)
 		{
 			RecalculateAttribute(Attribute, CurrentTick);
@@ -144,49 +144,52 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentTick)
 	}
 }
 
-FAdaAttributePtr UAdaGameplayStateComponent::AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams)
+FAdaAttributeHandle UAdaGameplayStateComponent::AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams)
 {
 	if (FindAttribute_Internal(AttributeTag))
 	{
 		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Already added attribute %s to component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
-		return FAdaAttributePtr();
+		return FAdaAttributeHandle();
 	}
 
-	const TSharedRef<FAdaAttribute>& NewAttribute = Attributes.Add_GetRef(MakeShareable<FAdaAttribute>(new FAdaAttribute(AttributeTag, InitParams)));
+	const int32 Identifier = GetNextAttributeId();
+	const int32 Index = Attributes.Add(FAdaAttribute(AttributeTag, InitParams, Identifier));
 
-	return MakeAttributePtr(NewAttribute);
+	return FAdaAttributeHandle(this, AttributeTag, Index, Identifier);
 }
 
-void UAdaGameplayStateComponent::RemoveAttribute(const FGameplayTag AttributeTag)
+void UAdaGameplayStateComponent::RemoveAttribute(const FAdaAttributeHandle& AttributeHandle)
 {
-	TOptional<TSharedRef<FAdaAttribute>> FoundAttributeOptional = FindAttributeRef_Internal(AttributeTag);
-	if (!FoundAttributeOptional.IsSet())
+	const FAdaAttribute* FoundAttribute = AttributeHandle.Get();
+	if (!FoundAttribute)
 	{
-		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
+		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeHandle.AttributeTag.ToString(), *GetNameSafe(this));
 		return;
 	}
 
-	const TSharedRef<FAdaAttribute>& FoundAttribute = FoundAttributeOptional.GetValue();
 	for (auto& [DependentAttributeTag, Index]: FoundAttribute->AttributeDependencies)
 	{
 		RemoveModifierByIndex(Index);
 	}
 	
-	Attributes.Remove(FoundAttribute);
+	Attributes.RemoveAt(AttributeHandle.Index);
 }
 
-FAdaAttributePtr UAdaGameplayStateComponent::FindAttribute(const FGameplayTag AttributeTag) const
+FAdaAttributeHandle UAdaGameplayStateComponent::FindAttribute(const FGameplayTag AttributeTag) const
 {
-	for (const TSharedRef<FAdaAttribute>& Attribute : Attributes)
+	for (auto It = Attributes.CreateConstIterator(); It; ++It)
 	{
-		if (Attribute.Get().AttributeTag == AttributeTag)
+		const int32 Index = It.GetIndex();
+		const FAdaAttribute& Attribute = *It;
+		
+		if (Attribute.AttributeTag == AttributeTag)
 		{
-			return MakeAttributePtr(Attribute);
+			return FAdaAttributeHandle(this, AttributeTag, Index, Attribute.Identifier);
 		}
 	}
 
 	UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
-	return FAdaAttributePtr();
+	return FAdaAttributeHandle();
 }
 
 bool UAdaGameplayStateComponent::HasAttribute(const FGameplayTag AttributeTag) const
@@ -201,14 +204,14 @@ bool UAdaGameplayStateComponent::HasAttribute(const FGameplayTag AttributeTag) c
 
 float UAdaGameplayStateComponent::GetAttributeValue(const FGameplayTag AttributeTag) const
 {
-	const TSharedPtr<FAdaAttribute> FoundAttribute = FindAttribute_Internal(AttributeTag);
+	const FAdaAttribute* FoundAttribute = FindAttribute_Internal(AttributeTag);
 	return FoundAttribute ? FoundAttribute->CurrentValue : 0.0f;
 }
 
 FAdaOnAttributeUpdated* UAdaGameplayStateComponent::GetDelegateForAttribute(const FGameplayTag AttributeTag)
 {
-	TSharedPtr<FAdaAttribute> Attribute = FindAttribute_Internal(AttributeTag);
-	if (!Attribute.IsValid())
+	FAdaAttribute* Attribute = FindAttribute_Internal(AttributeTag);
+	if (!Attribute)
 	{
 		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
 		return nullptr;
@@ -221,8 +224,8 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 {
 	FAdaAttributeModifierHandle OutHandle = FAdaAttributeModifierHandle();
 	
-	TSharedPtr<FAdaAttribute> FoundAttribute = FindAttribute_Internal(AttributeTag);
-	if (!FoundAttribute.IsValid())
+	FAdaAttribute* FoundAttribute = FindAttribute_Internal(AttributeTag);
+	if (!FoundAttribute)
 	{
 		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
 		return OutHandle;
@@ -255,25 +258,28 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 	}
 	else
 	{
-		auto CacheModifier = [this, Attribute](const TSharedRef<FAdaAttributeModifier>& ModifierRef, FAdaAttribute& InAttribute) -> int32
+		auto CacheModifier = [this, Attribute](const FAdaAttributeModifier& ModifierRef, FAdaAttribute& InAttribute, FAdaAttributeModifierHandle& OutHandle, const int32 ModifierId) -> int32
 		{
 			// Cache the modifier.
 			int32 OutIndex = ActiveModifiers.Add(ModifierRef);
-			InAttribute.ActiveModifiers.Add(ModifierRef);
+
+			A_ENSURE(OutIndex != INDEX_NONE);
+			OutHandle = FAdaAttributeModifierHandle(this, OutIndex, ModifierId);
+
+			InAttribute.ActiveModifiers.Add(OutHandle);
 
 			return OutIndex;
 		};
 		
 		const int32 ModifierId = GetNextModifierId();
 		// Create the modifier, but don't cache it yet as we may have extra setup to do first.
-		const TSharedRef<FAdaAttributeModifier>& ModifierRef = MakeShareable<FAdaAttributeModifier>(new FAdaAttributeModifier(AttributeTag, ModifierToApply, LatestTick, ModifierId));
+		FAdaAttributeModifier* Modifier = new FAdaAttributeModifier(AttributeTag, ModifierToApply, LatestTick, ModifierId);
 		
-		FAdaAttributeModifier& Modifier = ModifierRef.Get();
 		int32 OutIndex = INDEX_NONE;
-		if (Modifier.CalculationType == EAdaAttributeModCalcType::SetByAttribute)
+		if (Modifier->CalculationType == EAdaAttributeModCalcType::SetByAttribute)
 		{
-			TSharedPtr<FAdaAttribute> ModifyingAttribute = FindAttribute_Internal(ModifierToApply.ModifyingAttribute);
-			if (!ModifyingAttribute.IsValid())
+			FAdaAttribute* ModifyingAttribute = FindAttribute_Internal(ModifierToApply.ModifyingAttribute);
+			if (!ModifyingAttribute)
 			{
 				UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *ModifierToApply.ModifyingAttribute.ToString(), *GetNameSafe(this));
 				return OutHandle;
@@ -284,14 +290,15 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 				UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Attempted to create circular modifier dependency for attributes %s and %s!"), __FUNCTION__, *AttributeTag.ToString(), *ModifierToApply.ModifyingAttribute.ToString());
 				return OutHandle;
 			}
-
-			// Cache the modifier.
-			OutIndex = CacheModifier(ModifierRef, Attribute);
 			
-			Modifier.SetModifyingAttribute(*ModifyingAttribute);
+			Modifier->SetModifyingAttribute(*ModifyingAttribute);
+			
+			// Cache the modifier.
+			OutIndex = CacheModifier(*Modifier, Attribute, OutHandle, ModifierId);
+			
 			ModifyingAttribute->AttributeDependencies.Add({AttributeTag, OutIndex});
 		}
-		else if (Modifier.CalculationType == EAdaAttributeModCalcType::SetByData)
+		else if (Modifier->CalculationType == EAdaAttributeModCalcType::SetByData)
 		{
 			const UWorld* const World = GetWorld();
 			A_ENSURE_RET(World, OutHandle);
@@ -302,25 +309,22 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 			UAdaGameplayStateManager* StateManager = GameState->GetGameplayStateManager();
 			A_ENSURE_RET(StateManager, OutHandle);
 			
-			Modifier.SetModifierCurve(StateManager->GetCurveForModifier(ModifierToApply.ModifierCurveTag));
-			Modifier.CalculateValue();
+			Modifier->SetModifierCurve(StateManager->GetCurveForModifier(ModifierToApply.ModifierCurveTag));
+			Modifier->CalculateValue();
 
 			// Cache the modifier.
-			OutIndex = CacheModifier(ModifierRef, Attribute);
+			OutIndex = CacheModifier(*Modifier, Attribute, OutHandle, ModifierId);
 		}
 		else
 		{
 			// Cache the modifier.
-			OutIndex = CacheModifier(ModifierRef, Attribute);
+			OutIndex = CacheModifier(*Modifier, Attribute, OutHandle, ModifierId);
 		}
 
 		if (ModifierToApply.OperationType == EAdaAttributeModOpType::Override)
 		{
-			ApplyOverridingModifier(Attribute, ModifierRef);
+			ApplyOverridingModifier(Attribute, *Modifier, OutIndex);
 		}
-
-		A_ENSURE(OutIndex != INDEX_NONE);
-		OutHandle = FAdaAttributeModifierHandle(this, ModifierToApply.ApplicationType, OutIndex, ModifierId);
 	}
 
 	if (ModifierToApply.bRecalculateImmediately)
@@ -337,21 +341,20 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 
 bool UAdaGameplayStateComponent::RemoveModifier(FAdaAttributeModifierHandle& ModifierHandle)
 {
-	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifierByIndex(ModifierHandle.Index);
-	if (!ModifierOptional.IsSet())
+	FAdaAttributeModifier* Modifier = FindModifierByIndex(ModifierHandle.Index);
+	if (!Modifier)
 	{
 		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Failed to find modifier for handle %i, index %i."), __FUNCTION__, ModifierHandle.Identifier, ModifierHandle.Index);
 		return false;
 	}
 
-	TSharedRef<FAdaAttributeModifier>& Modifier = ModifierOptional.GetValue();
 	if (Modifier->GetIdentifier() != ModifierHandle.Identifier)
 	{
 		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Got identifier mismatch at index %i."), __FUNCTION__, ModifierHandle.Identifier);
 		return false;
 	}
 
-	RemoveModifier_Internal(Modifier, ModifierHandle.Index);
+	RemoveModifier_Internal(*Modifier, ModifierHandle.Index);
 	ModifierHandle.Invalidate();
 	
 	return true;
@@ -559,111 +562,110 @@ bool UAdaGameplayStateComponent::RemoveStateTag(const FGameplayTag StateTag)
 	return ActiveStates.UpdateTagCount(StateTag, -1);;
 }
 
-TSharedPtr<FAdaAttribute> UAdaGameplayStateComponent::FindAttribute_Internal(const FGameplayTag AttributeTag)
+FAdaAttribute* UAdaGameplayStateComponent::FindAttribute_Internal(const FGameplayTag AttributeTag)
 {
-	for (TSharedRef<FAdaAttribute>& Attribute : Attributes)
+	for (auto It = Attributes.CreateIterator(); It; ++It)
 	{
-		if (Attribute.Get().AttributeTag == AttributeTag)
+		FAdaAttribute& Attribute = *It;
+		if (Attribute.AttributeTag == AttributeTag)
 		{
-			return Attribute.ToSharedPtr();
+			return &Attribute;
 		}
 	}
 
 	return nullptr;
 }
 
-const TSharedPtr<FAdaAttribute> UAdaGameplayStateComponent::FindAttribute_Internal(const FGameplayTag AttributeTag) const
+const FAdaAttribute* UAdaGameplayStateComponent::FindAttribute_Internal(const FGameplayTag AttributeTag) const
 {
-	for (const TSharedRef<FAdaAttribute>& Attribute : Attributes)
+	for (auto It = Attributes.CreateConstIterator(); It; ++It)
 	{
-		if (Attribute.Get().AttributeTag == AttributeTag)
+		const FAdaAttribute& Attribute = *It;
+		if (Attribute.AttributeTag == AttributeTag)
 		{
-			return Attribute.ToSharedPtr();
+			return &Attribute;
 		}
 	}
 
 	return nullptr;
 }
 
-TOptional<TSharedRef<FAdaAttribute>> UAdaGameplayStateComponent::FindAttributeRef_Internal(const FGameplayTag AttributeTag)
+FAdaAttribute* UAdaGameplayStateComponent::FindAttributeByIndex(int32 Index)
 {
-	for (const TSharedRef<FAdaAttribute>& Attribute : Attributes)
-	{
-		if (Attribute.Get().AttributeTag == AttributeTag)
-		{
-			return Attribute;
-		}
-	}
-
-	return TOptional<TSharedRef<FAdaAttribute>>();
+	return Attributes.IsValidIndex(Index) ? &Attributes[Index] : nullptr;
 }
 
-TOptional<TSharedRef<FAdaAttributeModifier>> UAdaGameplayStateComponent::FindModifierByIndex(int32 Index)
+const FAdaAttribute* UAdaGameplayStateComponent::FindAttributeByIndex(int32 Index) const
 {
-	if (!ActiveModifiers.IsValidIndex(Index))
-	{
-		return TOptional<TSharedRef<FAdaAttributeModifier>>();
-	}
-	
-	return ActiveModifiers[Index];
+	return Attributes.IsValidIndex(Index) ? &Attributes[Index] : nullptr;
 }
 
-const TOptional<TSharedRef<FAdaAttributeModifier>> UAdaGameplayStateComponent::FindModifierByIndex(int32 Index) const
+FAdaAttributeModifier* UAdaGameplayStateComponent::FindModifierByIndex(int32 Index)
 {
-	if (!ActiveModifiers.IsValidIndex(Index))
-	{
-		return TOptional<TSharedRef<FAdaAttributeModifier>>();
-	}
-	
-	return ActiveModifiers[Index];
+	return ActiveModifiers.IsValidIndex(Index) ? &ActiveModifiers[Index] : nullptr;
+}
+
+const FAdaAttributeModifier* UAdaGameplayStateComponent::FindModifierByIndex(int32 Index) const
+{
+	return ActiveModifiers.IsValidIndex(Index) ? &ActiveModifiers[Index] : nullptr;
 }
 
 bool UAdaGameplayStateComponent::RemoveModifierByIndex(int32 Index)
 {
-	TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifierByIndex(Index);
-	if (!ModifierOptional.IsSet())
+	FAdaAttributeModifier* Modifier = FindModifierByIndex(Index);
+	if (!Modifier)
 	{
 		return false;
 	}
 
-	TSharedRef<FAdaAttributeModifier>& Modifier = ModifierOptional.GetValue();
-
-	return RemoveModifier_Internal(Modifier, Index);
+	return RemoveModifier_Internal(*Modifier, Index);
 }
 
-bool UAdaGameplayStateComponent::RemoveModifier_Internal(TSharedRef<FAdaAttributeModifier>& Modifier, int32 Index)
+bool UAdaGameplayStateComponent::RemoveModifier_Internal(FAdaAttributeModifier& Modifier, int32 Index)
 {
-	TSharedPtr<FAdaAttribute> Attribute = FindAttribute_Internal(Modifier->AffectedAttribute);
-	A_ENSURE_RET(Attribute.IsValid(), false);
+	FAdaAttribute* Attribute = FindAttribute_Internal(Modifier.AffectedAttribute);
+	A_ENSURE_RET(Attribute, false);
 
-	Attribute->ActiveModifiers.Remove(Modifier);
-
-	if (Attribute->bIsOverridden && Attribute->OverridingModifier == Modifier)
+	for (uint32 i = Attribute->ActiveModifiers.Num() - 1; i == 0; i--)
 	{
-		Attribute->OverridingModifier = nullptr;
+		FAdaAttributeModifierHandle& ModifierHandle = Attribute->ActiveModifiers[i];
+		if (A_ENSURE(ModifierHandle.Identifier != INDEX_NONE))
+		{
+			continue;
+		}
+
+		if (ModifierHandle.Identifier == Modifier.Identifier)
+		{
+			Attribute->ActiveModifiers.RemoveAt(i);
+		}
+	}
+
+	if (Attribute->bIsOverridden && Attribute->OverridingModifier.IsValid() && Attribute->OverridingModifier.Identifier == Modifier.GetIdentifier())
+	{
+		Attribute->OverridingModifier.Invalidate();
 		Attribute->bIsOverridden = false;
 	}
 
-	if (Modifier->CalculationType == EAdaAttributeModCalcType::SetByAttribute)
+	if (Modifier.CalculationType == EAdaAttributeModCalcType::SetByAttribute)
 	{
-		TSharedPtr<FAdaAttribute> ModifyingAttribute = FindAttribute_Internal(Modifier->ModifyingAttribute);
-		if (A_ENSURE(ModifyingAttribute.IsValid()))
+		FAdaAttribute* ModifyingAttribute = FindAttribute_Internal(Modifier.ModifyingAttribute);
+		if (A_ENSURE(ModifyingAttribute))
 		{
-			ModifyingAttribute->AttributeDependencies.Remove(Modifier->AffectedAttribute);
+			ModifyingAttribute->AttributeDependencies.Remove(Modifier.AffectedAttribute);
 		}
 		else
 		{
-			UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Failed to get modifying attribute %s to attribute %s on modifier removal."), __FUNCTION__, *Modifier->ModifyingAttribute.ToString(), *Modifier->AffectedAttribute.ToString());
+			UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Failed to get modifying attribute %s to attribute %s on modifier removal."), __FUNCTION__, *Modifier.ModifyingAttribute.ToString(), *Modifier.AffectedAttribute.ToString());
 		}
 	}
 
-	if (Modifier->ParentStatusEffect.IsValid())
+	if (Modifier.ParentStatusEffect.IsValid())
 	{
 		int32 FoundHandleIndex = INDEX_NONE;
-		for (int32 ModifierIndex = 0; ModifierIndex < Modifier->ParentStatusEffect->ActiveModifierHandles.Num(); ModifierIndex++)
+		for (int32 ModifierIndex = 0; ModifierIndex < Modifier.ParentStatusEffect->ActiveModifierHandles.Num(); ModifierIndex++)
 		{
-			FAdaAttributeModifierHandle& Handle = Modifier->ParentStatusEffect->ActiveModifierHandles[ModifierIndex];
-			if (Handle.Identifier == Modifier->Identifier)
+			FAdaAttributeModifierHandle& Handle = Modifier.ParentStatusEffect->ActiveModifierHandles[ModifierIndex];
+			if (Handle.Identifier == Modifier.Identifier)
 			{
 				FoundHandleIndex = ModifierIndex;
 				break;
@@ -672,7 +674,7 @@ bool UAdaGameplayStateComponent::RemoveModifier_Internal(TSharedRef<FAdaAttribut
 
 		if (FoundHandleIndex != INDEX_NONE)
 		{
-			Modifier->ParentStatusEffect->ActiveModifierHandles.RemoveAt(FoundHandleIndex);
+			Modifier.ParentStatusEffect->ActiveModifierHandles.RemoveAt(FoundHandleIndex);
 		}
 	}
 
@@ -731,17 +733,17 @@ void UAdaGameplayStateComponent::ApplyImmediateModifier(FAdaAttribute& Attribute
 	}
 }
 
-void UAdaGameplayStateComponent::ApplyOverridingModifier(FAdaAttribute& Attribute, const TSharedRef<FAdaAttributeModifier>& Modifier)
+void UAdaGameplayStateComponent::ApplyOverridingModifier(FAdaAttribute& Attribute, const FAdaAttributeModifier& Modifier, const int32 ModifierIndex)
 {
 	Attribute.bIsOverridden = true;
-	Attribute.OverridingModifier = Modifier;
+	Attribute.OverridingModifier = FAdaAttributeModifierHandle(this, ModifierIndex, Modifier.Identifier);
 
-	if (Modifier->ModifiesClamping())
+	if (Modifier.ModifiesClamping())
 	{
 		A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(0), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
 		
-		Attribute.CurrentClampingValues.X += Modifier->ClampingParams.bHasMinDelta ? Modifier->ClampingParams.MinDelta : 0.0f;
-		Attribute.CurrentClampingValues.Y += Modifier->ClampingParams.bHasMaxDelta ? Modifier->ClampingParams.MaxDelta : 0.0f;
+		Attribute.CurrentClampingValues.X += Modifier.ClampingParams.bHasMinDelta ? Modifier.ClampingParams.MinDelta : 0.0f;
+		Attribute.CurrentClampingValues.Y += Modifier.ClampingParams.bHasMaxDelta ? Modifier.ClampingParams.MaxDelta : 0.0f;
 	}
 }
 
@@ -757,7 +759,7 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 	if (Attribute.bIsOverridden)
 	{
 		A_ENSURE_RET(Attribute.OverridingModifier.IsValid(), void(0));
-		TSharedPtr<FAdaAttributeModifier> OverridingModifier = Attribute.OverridingModifier.Pin();
+		FAdaAttributeModifier* OverridingModifier = FindModifierByIndex(Attribute.OverridingModifier.Index);
 		CurrentValue = OverridingModifier->ModifierValue;
 		bWasOverridden = true;
 	}
@@ -779,16 +781,9 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 		float AggregatedCurrentPostAdditives = 0.0f;
 		
 		// Aggregate modifiers from the attribute's active modifier list.
-		for (TWeakPtr<FAdaAttributeModifier> ModifierWeak : Attribute.ActiveModifiers)
+		for (FAdaAttributeModifierHandle& ModifierHandle : Attribute.ActiveModifiers)
 		{
-			TSharedPtr<FAdaAttributeModifier> ModifierPtr = ModifierWeak.Pin();
-			if (!ModifierPtr.IsValid())
-			{
-				UE_LOG(LogAdaGameplayState, Warning, TEXT("%hs: Invalid modifier to attribute %s!"), __FUNCTION__, *Attribute.AttributeTag.ToString());
-				continue;
-			}
-
-			FAdaAttributeModifier* Modifier = ModifierPtr.Get();
+			FAdaAttributeModifier* Modifier = FindModifierByIndex(ModifierHandle.Index);
 			if (!Modifier)
 			{
 				UE_LOG(LogAdaGameplayState, Warning, TEXT("%hs: Invalid modifier to attribute %s!"), __FUNCTION__, *Attribute.AttributeTag.ToString());
@@ -820,7 +815,7 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 					}
 					case EAdaAttributeModOpType::Multiply:
 					{
-						AggregatedBaseMultipliers += ModifierValue;
+						AggregatedBaseMultipliers *= ModifierValue;
 						break;
 					}
 					case EAdaAttributeModOpType::PostAdditive:
@@ -842,7 +837,7 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 					}
 					case EAdaAttributeModOpType::Multiply:
 					{
-						AggregatedCurrentMultipliers += ModifierValue;
+						AggregatedCurrentMultipliers *= ModifierValue;
 						break;
 					}
 					case EAdaAttributeModOpType::PostAdditive:
@@ -881,15 +876,15 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 
 bool UAdaGameplayStateComponent::DoesAttributeDependOnOther(const FGameplayTag AttributeTag, const FGameplayTag OtherAttributeTag) const
 {
-	TSharedPtr<FAdaAttribute> Attribute = FindAttribute_Internal(AttributeTag);
-	if (!Attribute.IsValid())
+	const FAdaAttribute* const Attribute = FindAttribute_Internal(AttributeTag);
+	if (!Attribute)
 	{
 		UE_LOG(LogAdaGameplayState, Warning, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
 		return false;
 	}
 
-	TSharedPtr<FAdaAttribute> OtherAttribute = FindAttribute_Internal(OtherAttributeTag);
-	if (!OtherAttribute.IsValid())
+	const FAdaAttribute* const OtherAttribute = FindAttribute_Internal(OtherAttributeTag);
+	if (!OtherAttribute)
 	{
 		UE_LOG(LogAdaGameplayState, Warning, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *OtherAttributeTag.ToString(), *GetNameSafe(this));
 		return false;
@@ -909,21 +904,20 @@ void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute
 	// Update any modifiers that use this attribute and set those attributes as dirty for recalculation.
 	for (auto& [DependentAttributeTag, Index]: Attribute.AttributeDependencies)
 	{
-		TSharedPtr<FAdaAttribute> DependentAttribute = FindAttribute_Internal(DependentAttributeTag);
-		if (!DependentAttribute.IsValid())
+		FAdaAttribute* DependentAttribute = FindAttribute_Internal(DependentAttributeTag);
+		if (!DependentAttribute)
 		{
 			UE_LOG(LogAdaGameplayState, Warning, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *DependentAttributeTag.ToString(), *GetNameSafe(this));
 			continue;
 		}
 
 		// Find the modifier that uses this attribute and update the value.
-		TOptional<TSharedRef<FAdaAttributeModifier>> ModifierOptional = FindModifierByIndex(Index);
-		if (!ModifierOptional.IsSet())
+		FAdaAttributeModifier* Modifier = FindModifierByIndex(Index);
+		if (!Modifier)
 		{
 			continue;
 		}
 
-		TSharedRef<FAdaAttributeModifier>& Modifier = ModifierOptional.GetValue();
 		if (!A_ENSURE(Modifier->CalculationType == EAdaAttributeModCalcType::SetByAttribute))
 		{
 			continue;
@@ -937,6 +931,17 @@ void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute
 	{
 		Attribute.OnAttributeUpdated.Broadcast(Attribute.AttributeTag, Attribute.BaseValue, Attribute.CurrentValue, OldBase, OldCurrent);
 	}
+}
+
+int32 UAdaGameplayStateComponent::GetNextAttributeId()
+{
+	LatestModifierId++;
+	if (LatestModifierId == INDEX_NONE)
+	{
+		LatestModifierId = 0;
+	}
+
+	return LatestModifierId;
 }
 
 int32 UAdaGameplayStateComponent::GetNextModifierId()
@@ -959,11 +964,6 @@ int32 UAdaGameplayStateComponent::GetNextStatusEffectId()
 	}
 
 	return LatestStatusEffectId;
-}
-
-FAdaAttributePtr UAdaGameplayStateComponent::MakeAttributePtr(const TSharedRef<FAdaAttribute>& InAttribute) const
-{
-	return FAdaAttributePtr(InAttribute, this);
 }
 
 bool UAdaGameplayStateComponent::RemoveStatusEffect_Internal(const int32 Index)

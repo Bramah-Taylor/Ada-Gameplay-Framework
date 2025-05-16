@@ -5,63 +5,63 @@
 #include "Debug/AdaAssertionMacros.h"
 #include "GameplayState/AdaGameplayStateComponent.h"
 
-FAdaAttribute::FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitParams& InitParams) :
+FAdaAttribute::FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitParams& InitParams, const int32 NewId) :
 	AttributeTag(Tag),
 	ResetValue(InitParams.InitialValue),
 	BaseValue(InitParams.InitialValue),
 	CurrentValue(InitParams.InitialValue),
 	BaseClampingValues(InitParams.InitialClampingValues),
 	CurrentClampingValues(InitParams.InitialClampingValues),
-	bUsesClamping(InitParams.bUsesClamping)
+	bUsesClamping(InitParams.bUsesClamping),
+	Identifier(NewId)
 {
 	
 }
 
-FAdaAttributePtr::FAdaAttributePtr(const TSharedRef<FAdaAttribute>& InAttribute, const UAdaGameplayStateComponent* const OwningStateComponent)
+FAdaAttributeHandle::FAdaAttributeHandle(const UAdaGameplayStateComponent* const Owner, const FGameplayTag NewTag, const int32 NewIndex, const int32 NewId) :
+	AttributeTag(NewTag),
+	OwningStateComponentWeak(Owner),
+	Index(NewIndex),
+	Identifier(NewId)
 {
-	AttributeTag = InAttribute.Get().AttributeTag;
-	AttributeWeak = InAttribute;
-	OwningStateComponentWeak = OwningStateComponent;
 }
 
-bool FAdaAttributePtr::IsValid() const
+bool FAdaAttributeHandle::IsValid(bool bValidateOwner) const
 {
-	return AttributeWeak.IsValid() && AttributeTag.IsValid();
-}
-
-bool FAdaAttributePtr::TryGetFromOwner()
-{
-	if (!OwningStateComponentWeak.IsValid() || !AttributeTag.IsValid())
+	if (Identifier == INDEX_NONE || Index == INDEX_NONE || !AttributeTag.IsValid())
 	{
 		return false;
 	}
 
-	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
-	A_ENSURE_RET(::IsValid(OwningStateComponent), false);
-
-	FAdaAttributePtr FoundAttribute = OwningStateComponent->FindAttribute(AttributeTag);
-	if (FoundAttribute.IsValid())
+	if (!bValidateOwner)
 	{
-		AttributeWeak = FoundAttribute.AttributeWeak;
 		return true;
 	}
-
-	return false;
-}
-
-const FAdaAttribute* FAdaAttributePtr::Get() const
-{
-	const TSharedPtr<FAdaAttribute> AttributePtr = AttributeWeak.Pin();
-	if (!AttributePtr.IsValid())
-	{
-		return nullptr;
-	}
 	
-	return AttributePtr.Get();
+	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
+	A_VALIDATE_OBJ(OwningStateComponent, false);
+
+	const FAdaAttribute* Attribute = OwningStateComponent->FindAttributeByIndex(Index);
+	if (!Attribute)
+	{
+		return false;
+	}
+
+	return Attribute->GetIdentifier() == Identifier;
 }
 
-void FAdaAttributePtr::Invalidate()
+const FAdaAttribute* FAdaAttributeHandle::Get() const
 {
-	AttributeWeak = nullptr;
+	const UAdaGameplayStateComponent* const OwningStateComponent = OwningStateComponentWeak.Get();
+	A_VALIDATE_OBJ(OwningStateComponent, nullptr);
+
+	return OwningStateComponent->FindAttributeByIndex(Index);
+}
+
+void FAdaAttributeHandle::Invalidate()
+{
 	AttributeTag = FGameplayTag::EmptyTag;
+	OwningStateComponentWeak = nullptr;
+	Index = INDEX_NONE;
+	Identifier = INDEX_NONE;
 }
