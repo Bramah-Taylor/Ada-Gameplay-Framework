@@ -94,12 +94,12 @@ void UAdaGameplayStateManager::GetAllStatusEffectTags(TArray<FGameplayTag>& OutT
 	return LoadedStatusEffectDefinitions.GenerateKeyArray(OutTags);
 }
 
-const UCurveFloat* UAdaGameplayStateManager::GetCurveForModifier(const FGameplayTag CurveTag)
+const UCurveFloat* UAdaGameplayStateManager::GetCurveForModifier(const FGameplayTag CurveTag) const
 {
 	const UDataRegistrySubsystem* const DataRegistrySubsystem = UDataRegistrySubsystem::Get();
 	A_ENSURE_RET(IsValid(DataRegistrySubsystem), nullptr);
 	
-	const FAdaAttributeCurveModifierRow* const CurveModifierRow = DataRegistrySubsystem->GetCachedItem<FAdaAttributeCurveModifierRow>({"CurveModifiers", CurveTag.GetTagName()});
+	const FAdaAttributeCurveModifierRow* const CurveModifierRow = DataRegistrySubsystem->GetCachedItem<FAdaAttributeCurveModifierRow>({CurveModifierRegistry, CurveTag.GetTagName()});
 	A_ENSURE_RET(CurveModifierRow, nullptr);
 
 	return CurveModifierRow->Curve;

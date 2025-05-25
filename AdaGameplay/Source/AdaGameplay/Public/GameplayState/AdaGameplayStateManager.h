@@ -4,6 +4,7 @@
 
 #include "GameplayTagContainer.h"
 #include "Components/ActorComponent.h"
+#include "DataRegistryId.h"
 
 #include "AdaGameplayStateManager.generated.h"
 
@@ -28,7 +29,7 @@ public:
 	const UAdaStatusEffectDefinition* GetStatusEffectDefinition(const FGameplayTag EffectTag) const;
 	void GetAllStatusEffectTags(TArray<FGameplayTag>& OutTags) const;
 
-	static const UCurveFloat* GetCurveForModifier(const FGameplayTag CurveTag);
+	const UCurveFloat* GetCurveForModifier(const FGameplayTag CurveTag) const;
 
 protected:
 	// Begin UActorComponent overrides
@@ -43,6 +44,10 @@ protected:
 	void IncrementTickCounter();
 
 	void OnStatusEffectDefsLoaded();
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data");
+	FDataRegistryType CurveModifierRegistry = "CurveModifiers";
 
 private:
 	struct FTickBucket

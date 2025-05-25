@@ -2,9 +2,11 @@
 
 #include "GameplayState/AdaGameplayStateTags.h"
 
-// Curve modifier tags.
-UE_DEFINE_GAMEPLAY_TAG(Tag_Modifier_Curve_Linear_Increase, "Modifier.Curve.Linear.Increase");
-UE_DEFINE_GAMEPLAY_TAG(Tag_Modifier_Curve_Linear_Decrease, "Modifier.Curve.Linear.Decrease");
-UE_DEFINE_GAMEPLAY_TAG(Tag_Modifier_Curve_Curved_Increase, "Modifier.Curve.Curved.Increase");
-UE_DEFINE_GAMEPLAY_TAG(Tag_Modifier_Curve_Curved_Decrease, "Modifier.Curve.Curved.Decrease");
-UE_DEFINE_GAMEPLAY_TAG(Tag_Modifier_Curve_Bell_Curve, "Modifier.Curve.Bell.Curve");
+namespace AdaTags::ModifierCurves
+{
+	UE_DEFINE_GAMEPLAY_TAG(LinearIncrease, "Modifier.Curve.Linear.Increase");
+	UE_DEFINE_GAMEPLAY_TAG(LinearDecrease, "Modifier.Curve.Linear.Decrease");
+	UE_DEFINE_GAMEPLAY_TAG(CurvedIncrease, "Modifier.Curve.Curved.Increase");
+	UE_DEFINE_GAMEPLAY_TAG(CurvedDecrease, "Modifier.Curve.Curved.Decrease");
+	UE_DEFINE_GAMEPLAY_TAG(BellCurve, "Modifier.Curve.Bell.Curve");
+}
