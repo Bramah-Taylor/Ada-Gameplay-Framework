@@ -13,9 +13,32 @@ FAdaAttribute::FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitPara
 	BaseClampingValues(InitParams.InitialClampingValues),
 	CurrentClampingValues(InitParams.InitialClampingValues),
 	bUsesClamping(InitParams.bUsesClamping),
+	bTreatAsInteger(InitParams.bTreatAsInteger),
 	Identifier(NewId)
 {
 	
+}
+
+float FAdaAttribute::GetBaseValue() const
+{
+	return bTreatAsInteger ? FMath::FloorToFloat(BaseValue) : BaseValue;
+}
+
+float FAdaAttribute::GetCurrentValue() const
+{
+	return bTreatAsInteger ? FMath::FloorToFloat(CurrentValue) : CurrentValue;
+}
+
+float FAdaAttribute::GetMaxValue(const bool bUseBase) const
+{
+	const float MaxValue = bUseBase ? BaseClampingValues.Y : CurrentClampingValues.Y;
+	return bTreatAsInteger ? FMath::FloorToFloat(MaxValue) : MaxValue;
+}
+
+float FAdaAttribute::GetMinValue(const bool bUseBase) const
+{
+	const float MinValue = bUseBase ? BaseClampingValues.X : CurrentClampingValues.X;
+	return bTreatAsInteger ? FMath::FloorToFloat(MinValue) : MinValue;
 }
 
 FAdaAttributeHandle::FAdaAttributeHandle(const UAdaGameplayStateComponent* const Owner, const FGameplayTag NewTag, const int32 NewIndex, const int32 NewId) :

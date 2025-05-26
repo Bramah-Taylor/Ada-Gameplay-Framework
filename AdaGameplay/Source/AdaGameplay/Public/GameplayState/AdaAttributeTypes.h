@@ -31,6 +31,11 @@ struct ADAGAMEPLAY_API FAdaAttributeInitParams
 	// The initial values we should apply to clamp this attribute, if we're using clamping.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "bUsesClamping", EditConditionHides))
 	FVector2D InitialClampingValues = FVector2D::ZeroVector;
+
+	// Whether the values of this attribute should be treated as an integer.
+	// Value getters for this attribute will floor the float value before returning it.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bTreatAsInteger = false;
 };
 
 // An attribute can be any arbitrary gameplay value.
@@ -48,12 +53,13 @@ public:
 	FAdaAttribute() = default;
 	FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitParams& InitParams, const int32 NewId);
 	
-	FORCEINLINE float GetBaseValue() const { return BaseValue; };
-	FORCEINLINE float GetCurrentValue() const { return CurrentValue; };
-	FORCEINLINE float GetMaxValue(const bool bUseBase = false) const { return bUseBase ? BaseClampingValues.Y : CurrentClampingValues.Y; };
-	FORCEINLINE float GetMinValue(const bool bUseBase = false) const { return bUseBase ? BaseClampingValues.X : CurrentClampingValues.X; };
-	FORCEINLINE float GetModifierCount() const { return ActiveModifiers.Num(); };
-	FORCEINLINE float GetDependencyCount() const { return AttributeDependencies.Num(); };
+	float GetBaseValue() const;
+	float GetCurrentValue() const;
+	float GetMaxValue(const bool bUseBase = false) const;
+	float GetMinValue(const bool bUseBase = false) const;
+	
+	FORCEINLINE int32 GetModifierCount() const { return ActiveModifiers.Num(); };
+	FORCEINLINE int32 GetDependencyCount() const { return AttributeDependencies.Num(); };
 	FORCEINLINE int32 GetIdentifier() const { return Identifier; };
 
 public:
@@ -88,6 +94,10 @@ protected:
 	// Whether this attribute uses clamping or not.
 	UPROPERTY(BlueprintReadOnly)
 	bool bUsesClamping = false;
+
+	// Whether the values of this attribute should be treated as an integer.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bTreatAsInteger = false;
 
 	// The identifier for this attribute.
 	// Used to check validity of attribute handles.
