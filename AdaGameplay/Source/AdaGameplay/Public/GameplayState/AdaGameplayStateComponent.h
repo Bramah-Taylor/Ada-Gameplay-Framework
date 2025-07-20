@@ -124,9 +124,9 @@ public:
 	bool RemoveStateTag(const FGameplayTag StateTag);
 
 	// #TODO(Ada.Gameplay): Move to child class in game module
-	FORCEINLINE const TSparseArray<FAdaAttribute>& GetAllAttributes() const { return Attributes; };
-	FORCEINLINE const TSparseArray<FAdaAttributeModifier>& GetAllModifiers() const { return ActiveModifiers; };
-	FORCEINLINE const FAdaGameplayTagCountContainer& GetActiveState() const { return ActiveStates; };
+	inline const TSparseArray<FAdaAttribute>& GetAllAttributes() const { return Attributes; };
+	inline const TSparseArray<FAdaAttributeModifier>& GetAllModifiers() const { return ActiveModifiers; };
+	inline const FAdaGameplayTagCountContainer& GetActiveState() const { return ActiveStates; };
 
 protected:
 	// Begin UActorComponent overrides.

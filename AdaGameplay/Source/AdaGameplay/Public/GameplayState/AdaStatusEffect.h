@@ -17,10 +17,10 @@ class ADAGAMEPLAY_API UAdaStatusEffect : public UObject
 
 public:
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE int32 GetIdentifier() const { return EffectId; };
+	inline int32 GetIdentifier() const { return EffectId; };
 
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE FGameplayTag GetEffectTag() const { return EffectTag; };
+	inline FGameplayTag GetEffectTag() const { return EffectTag; };
 
 	UFUNCTION()
 	bool ShouldRecalculateModifier(const FGameplayTag AttributeTag);

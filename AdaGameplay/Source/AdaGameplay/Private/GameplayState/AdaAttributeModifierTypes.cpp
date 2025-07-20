@@ -265,7 +265,7 @@ FString FAdaAttributeModifier::ToString() const
 
 void FAdaAttributeModifier::SetModifyingAttribute(const FAdaAttribute& InAttribute)
 {
-	A_ENSURE_RET(CalculationType == EAdaAttributeModCalcType::SetByAttribute, void(0));
+	A_ENSURE_RET(CalculationType == EAdaAttributeModCalcType::SetByAttribute, void());
 
 	ModifyingAttribute = InAttribute.AttributeTag;
 	ModifierValue = InAttribute.GetCurrentValue();
@@ -273,7 +273,7 @@ void FAdaAttributeModifier::SetModifyingAttribute(const FAdaAttribute& InAttribu
 
 void FAdaAttributeModifier::SetModifierCurve(const UCurveFloat* const InModifierCurve)
 {
-	A_ENSURE_RET(IsValid(InModifierCurve), void(0));
+	A_ENSURE_RET(IsValid(InModifierCurve), void());
 
 	ModifierCurve = InModifierCurve;
 }

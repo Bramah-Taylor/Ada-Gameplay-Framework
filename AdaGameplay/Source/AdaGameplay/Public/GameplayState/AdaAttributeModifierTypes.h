@@ -220,9 +220,9 @@ public:
 	FAdaAttributeModifier() = default;
 	FAdaAttributeModifier(const FGameplayTag Attribute, const FAdaAttributeModifierSpec& ModifierSpec, const uint64& CurrentTick, const int32 NewId);
 
-	FORCEINLINE FGameplayTag GetAffectedAttribute() const { return AffectedAttribute; };
-	FORCEINLINE float GetValue() const { return ModifierValue; };
-	FORCEINLINE int32 GetIdentifier() const { return Identifier; };
+	inline FGameplayTag GetAffectedAttribute() const { return AffectedAttribute; };
+	inline float GetValue() const { return ModifierValue; };
+	inline int32 GetIdentifier() const { return Identifier; };
 	
 	bool HasDuration() const;
 	bool HasExpired(const uint64& CurrentTick) const;

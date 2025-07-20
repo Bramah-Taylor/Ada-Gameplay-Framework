@@ -8,7 +8,7 @@
 void UAdaTickManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	const UWorld* const World = GetWorld();
-	A_ENSURE_RET(IsValid(World), void(0));
+	A_ENSURE_RET(IsValid(World), void());
 
 	const UAdaTickManagerSettings* const Settings = GetDefault<UAdaTickManagerSettings>();
 	A_ENSURE_RET(IsValid(Settings), void(0));

@@ -14,11 +14,11 @@ public:
 	UAdaTickManagerSettings() {};
 
 	/// The default ticks per second that the system as a whole aims for.
-	UPROPERTY(config, EditAnywhere, Category = "Tick Settings")
+	UPROPERTY(Config, EditAnywhere, Category = "Tick Settings")
 	uint8 TargetTPS = 30;
 
 	/// Whether to use aggregated ticks or not.
 	/// @note: Currently unsupported.
-	UPROPERTY(config, EditAnywhere, Category = "Tick Settings")
+	UPROPERTY(Config, EditAnywhere, Category = "Tick Settings")
 	bool bUseAggregatedTicks = false;
 };

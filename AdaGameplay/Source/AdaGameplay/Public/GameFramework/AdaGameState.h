@@ -16,7 +16,7 @@ class ADAGAMEPLAY_API AAdaGameState : public AGameStateBase
 public:
 	AAdaGameState(const FObjectInitializer& ObjectInitializer);
 
-	FORCEINLINE UAdaGameplayStateManager* GetGameplayStateManager() const {return GameplayStateManager; };
+	inline UAdaGameplayStateManager* GetGameplayStateManager() const {return GameplayStateManager; };
 
 protected:
 	UPROPERTY()

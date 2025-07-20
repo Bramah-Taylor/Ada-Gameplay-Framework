@@ -18,7 +18,7 @@ public:
 	void RegisterTickFunction(const UObject* const Object, const TFunction<void(const uint64&)>& TickFunction);
 	void UnregisterTickFunction(const UObject* const Object);
 
-	FORCEINLINE uint64 GetCurrentFrame() const { return CurrentFrame; };
+	inline uint64 GetCurrentFrame() const { return CurrentFrame; };
 
 	template<typename T>
 	void RegisterTickFunction(T* Object, void(T::*TickFunction)(const uint64&))

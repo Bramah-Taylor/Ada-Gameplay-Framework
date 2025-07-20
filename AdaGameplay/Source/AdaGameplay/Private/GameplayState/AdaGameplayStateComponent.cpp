@@ -20,13 +20,13 @@ void UAdaGameplayStateComponent::BeginPlay()
 	Super::BeginPlay();
 
 	const UWorld* const World = GetWorld();
-	A_ENSURE_RET(IsValid(World), void(0));
+	A_ENSURE_RET(IsValid(World), void());
 
 	const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
-	A_ENSURE_RET(IsValid(GameState), void(0));
+	A_ENSURE_RET(IsValid(GameState), void());
 
 	UAdaGameplayStateManager* StateManager = GameState->GetGameplayStateManager();
-	A_ENSURE_RET(IsValid(StateManager), void(0));
+	A_ENSURE_RET(IsValid(StateManager), void());
 
 	StateManager->RegisterStateComponent(this);
 }
@@ -39,13 +39,13 @@ void UAdaGameplayStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReaso
 	};
 
 	const UWorld* const World = GetWorld();
-	A_ENSURE_RET(World, void(0));
+	A_ENSURE_RET(World, void());
 
 	const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
-	A_ENSURE_RET(GameState, void(0));
+	A_ENSURE_RET(GameState, void());
 
 	UAdaGameplayStateManager* StateManager = GameState->GetGameplayStateManager();
-	A_ENSURE_RET(StateManager, void(0));
+	A_ENSURE_RET(StateManager, void());
 
 	StateManager->UnregisterStateComponent(this);
 }
@@ -53,7 +53,7 @@ void UAdaGameplayStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReaso
 void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentTick)
 {
 	const UWorld* const World = GetWorld();
-	A_VALIDATE_OBJ(World, void(0));
+	A_VALIDATE_OBJ(World, void());
 
 	TArray<TPair<FAdaAttributeModifier&, uint32>> ExpiredModifiers;
 	TArray<TPair<FAdaAttributeModifier&, uint32>> PostTick_ExpiredModifiers;
@@ -692,7 +692,7 @@ void UAdaGameplayStateComponent::ApplyImmediateModifier(FAdaAttribute& Attribute
 
 	if (ModifierToApply.ModifiesClamping())
 	{
-		A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(0), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
+		A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
 		
 		Attribute.BaseClampingValues.X += ModifierToApply.ClampingParams.bHasMinDelta ? ModifierToApply.ClampingParams.MinDelta : 0.0f;
 		Attribute.BaseClampingValues.Y += ModifierToApply.ClampingParams.bHasMaxDelta ? ModifierToApply.ClampingParams.MaxDelta : 0.0f;

@@ -58,9 +58,9 @@ public:
 	float GetMaxValue(const bool bUseBase = false) const;
 	float GetMinValue(const bool bUseBase = false) const;
 	
-	FORCEINLINE int32 GetModifierCount() const { return ActiveModifiers.Num(); };
-	FORCEINLINE int32 GetDependencyCount() const { return AttributeDependencies.Num(); };
-	FORCEINLINE int32 GetIdentifier() const { return Identifier; };
+	inline int32 GetModifierCount() const { return ActiveModifiers.Num(); };
+	inline int32 GetDependencyCount() const { return AttributeDependencies.Num(); };
+	inline int32 GetIdentifier() const { return Identifier; };
 
 public:
 	// The gameplay tag representing this attribute.

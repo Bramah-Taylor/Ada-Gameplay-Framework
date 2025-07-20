@@ -35,10 +35,10 @@ void UAdaGameplayStateManager::BeginPlay()
 	Super::BeginPlay();
 
 	UWorld* World = GetWorld();
-	A_ENSURE_RET(IsValid(World), void(0));
+	A_ENSURE_RET(IsValid(World), void());
 
 	UAdaTickManager* TickManager = World->GetSubsystem<UAdaTickManager>();
-	A_ENSURE_RET(IsValid(TickManager), void(0));
+	A_ENSURE_RET(IsValid(TickManager), void());
 
 	TickManager->RegisterTickFunction(this, &UAdaGameplayStateManager::FixedTick);
 }
@@ -46,7 +46,7 @@ void UAdaGameplayStateManager::BeginPlay()
 void UAdaGameplayStateManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UWorld* World = GetWorld();
-	A_VALIDATE_OBJ(World, void(0));
+	A_VALIDATE_OBJ(World, void());
 
 	UAdaTickManager* TickManager = World->GetSubsystem<UAdaTickManager>();
 	A_VALIDATE_OBJ(TickManager, void(0));
