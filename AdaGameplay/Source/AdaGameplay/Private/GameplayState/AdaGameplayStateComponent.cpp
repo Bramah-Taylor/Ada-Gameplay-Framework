@@ -752,7 +752,7 @@ void UAdaGameplayStateComponent::ApplyOverridingModifier(FAdaAttribute& Attribut
 
 	if (Modifier.ModifiesClamping())
 	{
-		A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(0), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
+		A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
 		
 		Attribute.CurrentClampingValues.X += Modifier.ClampingParams.bHasMinDelta ? Modifier.ClampingParams.MinDelta : 0.0f;
 		Attribute.CurrentClampingValues.Y += Modifier.ClampingParams.bHasMaxDelta ? Modifier.ClampingParams.MaxDelta : 0.0f;
@@ -770,7 +770,7 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 	bool bWasOverridden = false;
 	if (Attribute.bIsOverridden)
 	{
-		A_ENSURE_RET(Attribute.OverridingModifier.IsValid(), void(0));
+		A_ENSURE_RET(Attribute.OverridingModifier.IsValid(), void());
 		FAdaAttributeModifier* OverridingModifier = FindModifierByIndex(Attribute.OverridingModifier.Index);
 		CurrentValue = OverridingModifier->ModifierValue;
 		bWasOverridden = true;
@@ -809,7 +809,7 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 
 			if (Modifier->ModifiesClamping())
 			{
-				A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(0), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
+				A_ENSURE_MSG_RET(Attribute.bUsesClamping, void(), TEXT("Tried to clamp unclamped attribute %s!"), *Attribute.AttributeTag.ToString());
 		
 				Attribute.CurrentClampingValues.X += Modifier->ClampingParams.bHasMinDelta ? Modifier->ClampingParams.MinDelta : 0.0f;
 				Attribute.CurrentClampingValues.Y += Modifier->ClampingParams.bHasMaxDelta ? Modifier->ClampingParams.MaxDelta : 0.0f;

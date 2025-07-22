@@ -11,7 +11,7 @@ void UAdaTickManager::Initialize(FSubsystemCollectionBase& Collection)
 	A_ENSURE_RET(IsValid(World), void());
 
 	const UAdaTickManagerSettings* const Settings = GetDefault<UAdaTickManagerSettings>();
-	A_ENSURE_RET(IsValid(Settings), void(0));
+	A_ENSURE_RET(IsValid(Settings), void());
 
 	if (World->WorldType == EWorldType::PIE || World->WorldType == EWorldType::Game)
 	{
@@ -25,7 +25,7 @@ void UAdaTickManager::Initialize(FSubsystemCollectionBase& Collection)
 void UAdaTickManager::Deinitialize()
 {
 	const UWorld* const World = GetWorld();
-	A_VALIDATE_OBJ(World, void(0));
+	A_VALIDATE_OBJ(World, void());
 	
 	if (PreWorldActorTickHandle.IsValid())
 	{

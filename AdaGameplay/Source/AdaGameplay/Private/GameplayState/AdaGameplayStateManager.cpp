@@ -49,7 +49,7 @@ void UAdaGameplayStateManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	A_VALIDATE_OBJ(World, void());
 
 	UAdaTickManager* TickManager = World->GetSubsystem<UAdaTickManager>();
-	A_VALIDATE_OBJ(TickManager, void(0));
+	A_VALIDATE_OBJ(TickManager, void());
 
 	TickManager->UnregisterTickFunction(this);
 
@@ -60,7 +60,7 @@ void UAdaGameplayStateManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void UAdaGameplayStateManager::RegisterStateComponent(UAdaGameplayStateComponent* StateComponent)
 {
-	A_VALIDATE_OBJ(StateComponent, void(0));
+	A_VALIDATE_OBJ(StateComponent, void());
 
 	TickBuckets[NextBucketToAssign].Components.Add(StateComponent);
 	ComponentToBucketMap.Add({StateComponent, NextBucketToAssign});
@@ -70,7 +70,7 @@ void UAdaGameplayStateManager::RegisterStateComponent(UAdaGameplayStateComponent
 
 void UAdaGameplayStateManager::UnregisterStateComponent(UAdaGameplayStateComponent* StateComponent)
 {
-	A_VALIDATE_OBJ(StateComponent, void(0));
+	A_VALIDATE_OBJ(StateComponent, void());
 
 	uint8* FoundBucket = ComponentToBucketMap.Find(StateComponent);
 	if (!FoundBucket)
