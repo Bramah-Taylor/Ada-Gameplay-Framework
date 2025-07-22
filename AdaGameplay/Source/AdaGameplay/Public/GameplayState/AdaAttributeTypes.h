@@ -12,6 +12,7 @@ struct FAdaAttributeModifier;
 class UAdaGameplayStateComponent;
 
 DECLARE_MULTICAST_DELEGATE_FiveParams(FAdaOnAttributeUpdated, const FGameplayTag /*AttributeTag*/, const float /*NewBase*/, const float /*NewCurrent*/, const float /*OldBase*/, const float /*OldCurrent*/);
+DECLARE_MULTICAST_DELEGATE_FourParams(FAdaOnClampingValueHit, const FGameplayTag /*AttributeTag*/, const float /*CurrentValue*/, const bool /*bIsMin*/, const bool /*bIsBase*/);
 
 // Struct exposing parameters for initializing an attribute.
 // This limits exposure to the actual live data used by the struct and hands full control of initialization over to the attribute system.
@@ -69,6 +70,9 @@ public:
 
 	// Multicast delegate that is triggered whenever this attribute's value changes.
 	FAdaOnAttributeUpdated OnAttributeUpdated;
+
+	// Multicast delegate that is triggered whenever one of this attribute's clamping params is reached.
+	FAdaOnClampingValueHit OnClampingValueHit;
 	
 protected:
 	// An optional fallback value to revert this attribute to if desired.

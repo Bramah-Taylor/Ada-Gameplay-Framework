@@ -220,6 +220,18 @@ FAdaOnAttributeUpdated* UAdaGameplayStateComponent::GetDelegateForAttribute(cons
 	return &Attribute->OnAttributeUpdated;
 }
 
+FAdaOnClampingValueHit* UAdaGameplayStateComponent::GetClampingNotifyDelegateForAttribute(const FGameplayTag AttributeTag)
+{
+	FAdaAttribute* Attribute = FindAttribute_Internal(AttributeTag);
+	if (!Attribute)
+	{
+		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
+		return nullptr;
+	}
+
+	return &Attribute->OnClampingValueHit;
+}
+
 FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FGameplayTag AttributeTag, const FAdaAttributeModifierSpec& ModifierToApply)
 {
 	FAdaAttributeModifierHandle OutHandle = FAdaAttributeModifierHandle();
@@ -896,7 +908,7 @@ bool UAdaGameplayStateComponent::DoesAttributeDependOnOther(const FGameplayTag A
 void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute, const float OldBase, const float OldCurrent)
 {
 	// Value didn't change, so early return.
-	if (!FMath::IsNearlyEqual(Attribute.BaseValue, OldBase, 1E-04) || !FMath::IsNearlyEqual(Attribute.CurrentValue, OldCurrent, 1E-04))
+	if (FMath::IsNearlyEqual(Attribute.BaseValue, OldBase, 1E-04) && FMath::IsNearlyEqual(Attribute.CurrentValue, OldCurrent, 1E-04))
 	{
 		return;
 	}
@@ -930,6 +942,26 @@ void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute
 	if (Attribute.OnAttributeUpdated.IsBound())
 	{
 		Attribute.OnAttributeUpdated.Broadcast(Attribute.AttributeTag, Attribute.BaseValue, Attribute.CurrentValue, OldBase, OldCurrent);
+	}
+
+	if (Attribute.bUsesClamping && Attribute.OnClampingValueHit.IsBound())
+	{
+		if (FMath::IsNearlyEqual(Attribute.BaseValue, Attribute.GetMaxValue(true)))
+		{
+			Attribute.OnClampingValueHit.Broadcast(Attribute.AttributeTag, Attribute.BaseValue, false, true);
+		}
+		else if (FMath::IsNearlyEqual(Attribute.BaseValue, Attribute.GetMinValue(true)))
+		{
+			Attribute.OnClampingValueHit.Broadcast(Attribute.AttributeTag, Attribute.BaseValue, true, true);
+		}
+		if (FMath::IsNearlyEqual(Attribute.CurrentValue, Attribute.GetMaxValue()))
+		{
+			Attribute.OnClampingValueHit.Broadcast(Attribute.AttributeTag, Attribute.BaseValue, false, false);
+		}
+		else if (FMath::IsNearlyEqual(Attribute.CurrentValue, Attribute.GetMinValue()))
+		{
+			Attribute.OnClampingValueHit.Broadcast(Attribute.AttributeTag, Attribute.BaseValue, false, false);
+		}
 	}
 }
 

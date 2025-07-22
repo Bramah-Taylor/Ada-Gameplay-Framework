@@ -60,6 +60,12 @@ public:
 	/// @note	The returned delegate will be null if the attribute is not found.
 	FAdaOnAttributeUpdated* GetDelegateForAttribute(const FGameplayTag AttributeTag);
 
+	/// @brief	Get a delegate that broadcasts whenever the provided attribute reaches one of its clamping values.
+	/// @param	AttributeTag	The attribute we want to listen to changes for.
+	/// @return A delegate to subscribe to for notifications of when the clamping values for this attribute are reached.
+	/// @note	The returned delegate will be null if the attribute is not found.
+	FAdaOnClampingValueHit* GetClampingNotifyDelegateForAttribute(const FGameplayTag AttributeTag);
+
 	/// @brief	Modify the given attribute using the provided modifier spec.
 	///			This function will produce an attribute modifier, which this component manages internally based on the provided spec.
 	/// @param	AttributeTag	The attribute we want to modify.
