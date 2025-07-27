@@ -56,7 +56,7 @@ private:
 		uint64 CurrentFrame = 0;
 	};
 	
-	TArray<FTickBucket> TickBuckets;
+	TStaticArray<FTickBucket, ADA_TICK_BUCKET_COUNT> TickBuckets;
 	TMap<FObjectKey, uint8> ComponentToBucketMap;
 
 	uint8 NextBucketToTick = 0;

@@ -20,8 +20,6 @@ UAdaGameplayStateManager::UAdaGameplayStateManager()
 void UAdaGameplayStateManager::InitializeComponent()
 {
 	Super::InitializeComponent();
-	
-	TickBuckets.AddDefaulted(ADA_TICK_BUCKET_COUNT);
 
 	// Ideally, this should probably go into a world subsystem, but I'd prefer to encapsulate all global gameplay state
 	// functionality on this component. If this proves to be a problem, it can be moved later.
