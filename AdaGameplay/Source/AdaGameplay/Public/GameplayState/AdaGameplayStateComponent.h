@@ -12,6 +12,9 @@
 
 #include "AdaGameplayStateComponent.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_TwoParams(FAdaOnAttributeAdded, const FGameplayTag /*AttributeTag*/, const float /*InitialValue*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FAdaOnAttributeRemoved, const FGameplayTag /*AttributeTag*/);
+
 DECLARE_LOG_CATEGORY_EXTERN(LogAdaGameplayState, Log, All);
 
 UCLASS(ClassGroup = (Custom), Meta = (BlueprintSpawnableComponent))
@@ -133,6 +136,13 @@ public:
 	inline const TSparseArray<FAdaAttribute>& GetAllAttributes() const { return Attributes; };
 	inline const TSparseArray<FAdaAttributeModifier>& GetAllModifiers() const { return ActiveModifiers; };
 	inline const FAdaGameplayTagCountContainer& GetActiveState() const { return ActiveStates; };
+
+public:
+	// Delegate that broadcasts whenever an attribute is added to this component.
+	FAdaOnAttributeAdded OnAttributeAdded;
+
+	// Delegate that broadcasts whenever an attribute is removed from this component.
+	FAdaOnAttributeRemoved OnAttributeRemoved;
 
 protected:
 	// Begin UActorComponent overrides.

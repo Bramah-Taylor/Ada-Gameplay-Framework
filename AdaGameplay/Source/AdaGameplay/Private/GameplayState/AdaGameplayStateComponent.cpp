@@ -155,6 +155,11 @@ FAdaAttributeHandle UAdaGameplayStateComponent::AddAttribute(const FGameplayTag 
 	const int32 Identifier = GetNextAttributeId();
 	const int32 Index = Attributes.Add(FAdaAttribute(AttributeTag, InitParams, Identifier));
 
+	if (OnAttributeAdded.IsBound())
+	{
+		OnAttributeAdded.Broadcast(AttributeTag, InitParams.InitialValue);
+	}
+
 	return FAdaAttributeHandle(this, AttributeTag, Index, Identifier);
 }
 
@@ -170,6 +175,11 @@ void UAdaGameplayStateComponent::RemoveAttribute(const FAdaAttributeHandle& Attr
 	for (auto& [DependentAttributeTag, Index]: FoundAttribute->AttributeDependencies)
 	{
 		RemoveModifierByIndex(Index);
+	}
+
+	if (OnAttributeRemoved.IsBound())
+	{
+		OnAttributeRemoved.Broadcast(AttributeHandle.AttributeTag);
 	}
 	
 	Attributes.RemoveAt(AttributeHandle.Index);
