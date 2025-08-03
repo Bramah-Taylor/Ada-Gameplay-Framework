@@ -46,7 +46,7 @@ protected:
 	void OnStatusEffectDefsLoaded();
 
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data");
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
 	FDataRegistryType CurveModifierRegistry = "CurveModifiers";
 
 private:
