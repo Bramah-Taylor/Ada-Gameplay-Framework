@@ -47,6 +47,7 @@ public:
 
 	/// @brief	Get the current instance of the messaging subsystem.
 	/// @return The message subsystem for the game instance associated with the world of the specified object.
+	UFUNCTION(BlueprintCallable)
 	static UAdaMessagingSubsystem* Get(const UObject* WorldContextObject);
 
 	// Begin UGameInstanceSubsystem overrides.
@@ -55,18 +56,20 @@ public:
 
 	/// @brief	Broadcast a message of the specified type.
 	/// @param	Message			The message to send to listeners.
+	/// @param	OwningActor		Optional param which will limit the broadcast of this message to listeners who are listening only for this specific actor.
 	template <typename FMessageStructType>
-	void BroadcastMessage(const FMessageStructType& Message)
+	void BroadcastMessage(const FMessageStructType& Message, const AActor* const OwningActor = nullptr)
 	{
 		const UScriptStruct* StructType = TBaseStructure<FMessageStructType>::Get();
-		BroadcastMessageInternal(StructType, &Message);
+		BroadcastMessageInternal(StructType, &Message, OwningActor);
 	}
 
 	/// @brief	Register a callback to receive specific messages
 	/// @param	Callback		Function to call with the message when someone broadcasts it.
+	/// @param	Actor			Optional parameter for if we want to listen to events broadcast by a specific actor only.
 	/// @return	A handle that can be used to unregister this listener.
 	template <typename FMessageStructType>
-	FAdaMessageListenerHandle RegisterListener(TFunction<void(const FMessageStructType&)>&& Callback)
+	FAdaMessageListenerHandle RegisterListener(TFunction<void(const FMessageStructType&)>&& Callback, const AActor* const Actor = nullptr)
 	{
 		auto ThunkCallback = [InnerCallback = MoveTemp(Callback)](const UScriptStruct* SenderStructType, const void* SenderPayload)
 		{
@@ -74,16 +77,17 @@ public:
 		};
 
 		const UScriptStruct* StructType = TBaseStructure<FMessageStructType>::Get();
-		return RegisterListenerInternal(ThunkCallback, StructType);
+		return RegisterListenerInternal(ThunkCallback, StructType, Actor);
 	}
 
 	/// @brief	Register to receive messages of a specified type and handle it with a specified member function.
 	///			Executes a weak object validity check to ensure the object registering the function still exists before triggering the callback.
 	/// @param	Object			The object instance to call the function on.
 	/// @param	Function		Member function to call with the message when someone broadcasts it.
+	/// @param	Actor			Optional parameter for if we want to listen to events broadcast by a specific actor only.
 	/// @return A handle that can be used to unregister this listener.
 	template <typename FMessageStructType, typename TOwner = UObject>
-	FAdaMessageListenerHandle RegisterListener(TOwner* Object, void(TOwner::* Function)(const FMessageStructType&))
+	FAdaMessageListenerHandle RegisterListener(TOwner* Object, void(TOwner::* Function)(const FMessageStructType&), const AActor* const Actor = nullptr)
 	{
 		TWeakObjectPtr<TOwner> WeakObject(Object);
 		return RegisterListener<FMessageStructType>([WeakObject, Function](const FMessageStructType& Payload)
@@ -92,7 +96,7 @@ public:
 				{
 					(StrongObject->*Function)(Payload);
 				}
-			});
+			}, Actor);
 	}
 
 	/// @brief	Remove a message listener previously registered by RegisterListener.
@@ -103,18 +107,16 @@ protected:
 	/// @brief	Broadcast a message on the specified channel.
 	/// @param Message			The message to send.
 	UFUNCTION(BlueprintCallable, CustomThunk, Category = Messaging, Meta = (CustomStructureParam = "Message", AllowAbstract = "false", DisplayName = "Broadcast Message"))
-	void K2_BroadcastMessage(const int32& Message);
+	void K2_BroadcastMessage(const int32& Message, const AActor* const Actor = nullptr);
 
 	DECLARE_FUNCTION(execK2_BroadcastMessage);
 
 private:
 	// Internal helper for broadcasting a message.
-	void BroadcastMessageInternal(const UScriptStruct* StructType, const void* MessageBytes);
+	void BroadcastMessageInternal(const UScriptStruct* StructType, const void* MessageBytes, const AActor* const OwningActor = nullptr);
 
 	// Internal helper for registering a message listener.
-	FAdaMessageListenerHandle RegisterListenerInternal(
-		TFunction<void(const UScriptStruct*, const void*)>&& Callback,
-		const UScriptStruct* StructType);
+	FAdaMessageListenerHandle RegisterListenerInternal(TFunction<void(const UScriptStruct*, const void*)>&& Callback, const UScriptStruct* StructType, const AActor* const Actor = nullptr);
 
 	void UnregisterListenerInternal(const FName Channel, const int32 HandleID);
 
@@ -135,7 +137,8 @@ private:
 	};
 
 	// We still use 'channels' internally using script struct FNames for safe struct type identification.
-	TMap<FName, FChannelListenerList> ListenerMap;
+	using TListenerMap = TMap<FName, FChannelListenerList>;
+	TListenerMap ListenerMap;
 
-	// #TODO: Add actor channels using FObjectKey
+	TMap<FObjectKey, TListenerMap> ActorChannels;
 };

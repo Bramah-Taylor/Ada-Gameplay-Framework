@@ -21,12 +21,14 @@ void UAdaMessagingSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UAdaMessagingSubsystem::BroadcastMessageInternal(const UScriptStruct* StructType, const void* MessageBytes)
+void UAdaMessagingSubsystem::BroadcastMessageInternal(const UScriptStruct* StructType, const void* MessageBytes, const AActor* const Actor)
 {
 	const FName Channel = FName(StructType->GetStructCPPName());
+	const FObjectKey ActorKey = FObjectKey(Actor);
+	TListenerMap& RelevantListenerMap = (IsValid(Actor)) ? ActorChannels.FindOrAdd(ActorKey) : ListenerMap;
 	
 	// Broadcast the message
-	if (const FChannelListenerList* List = ListenerMap.Find(Channel))
+	if (const FChannelListenerList* List = RelevantListenerMap.Find(Channel))
 	{
 		// Copy in case there are removals while handling callbacks
 		TArray<FMessageListenerData> ListenerArray(List->Listeners);
@@ -38,7 +40,7 @@ void UAdaMessagingSubsystem::BroadcastMessageInternal(const UScriptStruct* Struc
 	}
 }
 
-void UAdaMessagingSubsystem::K2_BroadcastMessage(const int32& Message)
+void UAdaMessagingSubsystem::K2_BroadcastMessage(const int32& Message, const AActor* const Actor)
 {
 	// This will never be called, the exec version below will be hit instead
 	checkNoEntry();
@@ -51,18 +53,24 @@ DEFINE_FUNCTION(UAdaMessagingSubsystem::execK2_BroadcastMessage)
 	const void* const MessagePtr = Stack.MostRecentPropertyAddress;
 	const FStructProperty* const StructProp = CastField<FStructProperty>(Stack.MostRecentProperty);
 
+	P_GET_OBJECT(AActor, Actor);
+
 	P_FINISH;
 
 	if (ensure((StructProp != nullptr) && (StructProp->Struct != nullptr) && (MessagePtr != nullptr)))
 	{
-		P_THIS->BroadcastMessageInternal(StructProp->Struct, MessagePtr);
+		P_THIS->BroadcastMessageInternal(StructProp->Struct, MessagePtr, Actor);
 	}
 }
 
-FAdaMessageListenerHandle UAdaMessagingSubsystem::RegisterListenerInternal(TFunction<void(const UScriptStruct*, const void*)>&& Callback, const UScriptStruct* StructType)
+FAdaMessageListenerHandle UAdaMessagingSubsystem::RegisterListenerInternal(TFunction<void(const UScriptStruct*, const void*)>&& Callback, const UScriptStruct* StructType, const AActor* const Actor)
 {
 	const FName Channel = FName(StructType->GetStructCPPName());
-	FChannelListenerList& List = ListenerMap.FindOrAdd(Channel);
+
+	const FObjectKey ActorKey = FObjectKey(Actor);
+	TListenerMap& RelevantListenerMap = (IsValid(Actor)) ? ActorChannels.FindOrAdd(ActorKey) : ListenerMap;
+	
+	FChannelListenerList& List = RelevantListenerMap.FindOrAdd(Channel);
 
 	FMessageListenerData& Entry = List.Listeners.AddDefaulted_GetRef();
 	Entry.ReceivedCallback = MoveTemp(Callback);
