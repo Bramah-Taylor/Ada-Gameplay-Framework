@@ -21,7 +21,8 @@ public class AdaCore : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			"Core",
-			"DataRegistry"
+			"DataRegistry",
+			"GameplayTags",
 		});
 		
 		PrivateDependencyModuleNames.AddRange(new string[]
@@ -30,6 +31,7 @@ public class AdaCore : ModuleRules
 			"Engine",
 			"Slate",
 			"SlateCore",
+			"DataTableEditor"
 		});
 		
 		DynamicallyLoadedModuleNames.AddRange(new string[]
