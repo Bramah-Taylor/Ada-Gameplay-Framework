@@ -3,6 +3,7 @@
 #pragma once
 
 #include "GameplayTagContainer.h"
+#include "Data/AdaTaggedTableRow.h"
 
 #include "AdaAttributeModifierTypes.generated.h"
 
@@ -346,10 +347,16 @@ private:
 // Data table row for modifiers, identified by gameplay tag.
 // Data tables are used here because CurveTables fix the interpolation method for all curves to be the same, and we don't want that.
 USTRUCT()
-struct ADAGAMEPLAY_API FAdaAttributeCurveModifierRow : public FTableRowBase
+struct ADAGAMEPLAY_API FAdaAttributeCurveModifierRow : public FAdaTaggedTableRow
 {
 	GENERATED_BODY()
 
+public:
+	// Begin FAdaTaggedTableRow overrides.
+	virtual FGameplayTag GetRowTag() const override { return CurveTag; };
+	// End FAdaTaggedTableRow overrides.
+
+public:
 	// The tag that identifies this curve modifier.
 	UPROPERTY(EditDefaultsOnly, Category = "Data", Meta = (Categories = "Modifier.Curve"))
 	FGameplayTag CurveTag = FGameplayTag::EmptyTag;
