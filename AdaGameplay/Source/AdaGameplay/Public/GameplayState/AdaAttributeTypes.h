@@ -11,8 +11,27 @@
 struct FAdaAttributeModifier;
 class UAdaGameplayStateComponent;
 
+UENUM(BlueprintType)
+enum class EAdaAttributeDelta : uint8
+{
+	Ascending,
+	Descending
+};
+
 DECLARE_MULTICAST_DELEGATE_FiveParams(FAdaOnAttributeUpdated, const FGameplayTag /*AttributeTag*/, const float /*NewBase*/, const float /*NewCurrent*/, const float /*OldBase*/, const float /*OldCurrent*/);
 DECLARE_MULTICAST_DELEGATE_FourParams(FAdaOnClampingValueHit, const FGameplayTag /*AttributeTag*/, const float /*CurrentValue*/, const bool /*bIsMin*/, const bool /*bIsBase*/);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FAdaOnThresholdValueHit, const FGameplayTag /*AttributeTag*/, const float /*CurrentValue*/, const EAdaAttributeDelta /*Delta*/);
+
+USTRUCT()
+struct ADAGAMEPLAY_API FAdaAttributeThresholdDelegate
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	float ThresholdValue = 0.0f;
+
+	FAdaOnThresholdValueHit Delegate;
+};
 
 // Struct exposing parameters for initializing an attribute.
 // This limits exposure to the actual live data used by the struct and hands full control of initialization over to the attribute system.
@@ -20,6 +39,10 @@ USTRUCT(BlueprintType)
 struct ADAGAMEPLAY_API FAdaAttributeInitParams
 {
 	GENERATED_BODY()
+
+	// The gameplay tag for this attribute.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (Categories = "Attribute"))
+	FGameplayTag AttributeTag = FGameplayTag::EmptyTag;
 
 	// The initial value this attribute should have.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -37,6 +60,10 @@ struct ADAGAMEPLAY_API FAdaAttributeInitParams
 	// Value getters for this attribute will floor the float value before returning it.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bTreatAsInteger = false;
+
+	// Whether this attribute has a target value or not.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bUsesTargetValue = false;
 };
 
 // An attribute can be any arbitrary gameplay value.
@@ -58,10 +85,14 @@ public:
 	float GetCurrentValue() const;
 	float GetMaxValue(const bool bUseBase = false) const;
 	float GetMinValue(const bool bUseBase = false) const;
+
+	FAdaOnThresholdValueHit& AddThresholdDelegate(const float Value);
+	FAdaOnThresholdValueHit* GetThresholdDelegate(const float Value);
 	
 	inline int32 GetModifierCount() const { return ActiveModifiers.Num(); };
 	inline int32 GetDependencyCount() const { return AttributeDependencies.Num(); };
 	inline int32 GetIdentifier() const { return Identifier; };
+	inline float GetTargetValue() const { return TargetValue; };
 
 public:
 	// The gameplay tag representing this attribute.
@@ -87,6 +118,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	float CurrentValue = 0.0f;
 
+	// Optional value that this attribute is trending towards as it changes.
+	UPROPERTY(BlueprintReadOnly)
+	float TargetValue = 0.0f;
+
 	// Clamping values applied to the base value of this attribute.
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D BaseClampingValues = FVector2D::ZeroVector;
@@ -103,6 +138,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bTreatAsInteger = false;
 
+	// Whether this attribute has a target value or not.
+	UPROPERTY(BlueprintReadOnly)
+	bool bUsesTargetValue = false;
+
 	// The identifier for this attribute.
 	// Used to check validity of attribute handles.
 	UPROPERTY(BlueprintReadOnly)
@@ -117,6 +156,9 @@ private:
 
 	// Map of dependencies to modifier indices on the owning gameplay state component.
 	TMap<FGameplayTag, int32> AttributeDependencies;
+
+	// Array of threshold delegates for informing other systems when an attribute has hit a threshold.
+	TArray<FAdaAttributeThresholdDelegate> Thresholds;
 
 	// Whether this attribute is currently pending recalculation.
 	bool bIsDirty = false;

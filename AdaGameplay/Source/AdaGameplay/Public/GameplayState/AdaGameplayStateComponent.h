@@ -57,6 +57,11 @@ public:
 	/// @return The value of the attribute. Will be 0 if the attribute does not exist.
 	float GetAttributeValue(const FGameplayTag AttributeTag) const;
 
+	/// @brief	Set the target value of an attribute on this component.
+	/// @param	AttributeTag	The attribute to set the target value for.
+	/// @param	Value			The new target value for the specified attribute.
+	void SetAttributeTargetValue(const FGameplayTag AttributeTag, const float Value);
+
 	/// @brief	Get a delegate that broadcasts whenever the provided attribute is updated.
 	/// @param	AttributeTag	The attribute we want to listen to changes for.
 	/// @return A delegate to subscribe to for changes to this attribute.

@@ -39,13 +39,13 @@ void UAdaGameplayStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReaso
 	};
 
 	const UWorld* const World = GetWorld();
-	A_ENSURE_RET(World, void());
+	A_ENSURE_RET(IsValid(World), void());
 
 	const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
-	A_ENSURE_RET(GameState, void());
+	A_ENSURE_RET(IsValid(GameState), void());
 
 	UAdaGameplayStateManager* StateManager = GameState->GetGameplayStateManager();
-	A_ENSURE_RET(StateManager, void());
+	A_ENSURE_RET(IsValid(StateManager), void());
 
 	StateManager->UnregisterStateComponent(this);
 }
@@ -218,6 +218,16 @@ float UAdaGameplayStateComponent::GetAttributeValue(const FGameplayTag Attribute
 	return FoundAttribute ? FoundAttribute->CurrentValue : 0.0f;
 }
 
+void UAdaGameplayStateComponent::SetAttributeTargetValue(const FGameplayTag AttributeTag, const float Value)
+{
+	if (FAdaAttribute* FoundAttribute = FindAttribute_Internal(AttributeTag))
+	{
+		A_ENSURE_MSG_RET(FoundAttribute->bUsesTargetValue, void(), TEXT("Tried to use target value on attribute %s, which is not configured for target values."), *AttributeTag.ToString());
+
+		FoundAttribute->TargetValue = Value;
+	}
+}
+
 FAdaOnAttributeUpdated* UAdaGameplayStateComponent::GetDelegateForAttribute(const FGameplayTag AttributeTag)
 {
 	FAdaAttribute* Attribute = FindAttribute_Internal(AttributeTag);
@@ -323,13 +333,13 @@ FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FG
 		else if (Modifier->CalculationType == EAdaAttributeModCalcType::SetByData)
 		{
 			const UWorld* const World = GetWorld();
-			A_ENSURE_RET(World, OutHandle);
+			A_ENSURE_RET(IsValid(World), OutHandle);
 
 			const AAdaGameState* const GameState = World->GetGameState<AAdaGameState>();
-			A_ENSURE_RET(GameState, OutHandle);
+			A_ENSURE_RET(IsValid(GameState), OutHandle);
 
 			UAdaGameplayStateManager* StateManager = GameState->GetGameplayStateManager();
-			A_ENSURE_RET(StateManager, OutHandle);
+			A_ENSURE_RET(IsValid(StateManager), OutHandle);
 			
 			Modifier->SetModifierCurve(StateManager->GetCurveForModifier(ModifierToApply.ModifierCurveTag));
 			Modifier->CalculateValue();
@@ -744,6 +754,9 @@ void UAdaGameplayStateComponent::ApplyImmediateModifier(FAdaAttribute& Attribute
 		CurrentValue = FMath::Clamp(CurrentValue, Attribute.CurrentClampingValues.X, Attribute.CurrentClampingValues.Y);
 	}
 
+	// We're deliberately ignoring any possible target values here as immediate modifiers should not be affected by the target; we're free too go
+	// above or below as needed.
+
 	const float OldBase = Attribute.BaseValue;
 	const float OldCurrent = Attribute.CurrentValue;
 	Attribute.BaseValue = BaseValue;
@@ -885,6 +898,18 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 		CurrentValue = FMath::Clamp(CurrentValue, Attribute.CurrentClampingValues.X, Attribute.CurrentClampingValues.Y);
 	}
 
+	if (Attribute.bUsesTargetValue)
+	{
+		if (CurrentValue > Attribute.CurrentValue && CurrentValue > Attribute.TargetValue && Attribute.CurrentValue < Attribute.TargetValue)
+		{
+			CurrentValue = Attribute.TargetValue;
+		}
+		else if (CurrentValue < Attribute.CurrentValue && CurrentValue < Attribute.TargetValue && Attribute.CurrentValue > Attribute.TargetValue)
+		{
+			CurrentValue = Attribute.TargetValue;
+		}
+	}
+
 	const float OldBase = Attribute.BaseValue;
 	const float OldCurrent = Attribute.CurrentValue;
 	Attribute.BaseValue = BaseValue;
@@ -971,6 +996,18 @@ void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute
 		else if (FMath::IsNearlyEqual(Attribute.CurrentValue, Attribute.GetMinValue()))
 		{
 			Attribute.OnClampingValueHit.Broadcast(Attribute.AttributeTag, Attribute.BaseValue, false, false);
+		}
+	}
+	
+	for (FAdaAttributeThresholdDelegate& Threshold : Attribute.Thresholds)
+	{
+		if (OldCurrent < Threshold.ThresholdValue && Attribute.CurrentValue >= Threshold.ThresholdValue)
+		{
+			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Attribute.CurrentValue, EAdaAttributeDelta::Ascending);
+		}
+		else if (OldCurrent > Threshold.ThresholdValue && Attribute.CurrentValue <= Threshold.ThresholdValue)
+		{
+			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Attribute.CurrentValue, EAdaAttributeDelta::Descending);
 		}
 	}
 }

@@ -14,6 +14,7 @@ FAdaAttribute::FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitPara
 	CurrentClampingValues(InitParams.InitialClampingValues),
 	bUsesClamping(InitParams.bUsesClamping),
 	bTreatAsInteger(InitParams.bTreatAsInteger),
+	bUsesTargetValue(InitParams.bUsesTargetValue),
 	Identifier(NewId)
 {
 	
@@ -39,6 +40,34 @@ float FAdaAttribute::GetMinValue(const bool bUseBase) const
 {
 	const float MinValue = bUseBase ? BaseClampingValues.X : CurrentClampingValues.X;
 	return bTreatAsInteger ? FMath::FloorToFloat(MinValue) : MinValue;
+}
+
+FAdaOnThresholdValueHit& FAdaAttribute::AddThresholdDelegate(const float Value)
+{
+	for (FAdaAttributeThresholdDelegate& Threshold : Thresholds)
+	{
+		if (FMath::IsNearlyEqual(Threshold.ThresholdValue, Value))
+		{
+			return Threshold.Delegate;
+		}
+	}
+
+	FAdaAttributeThresholdDelegate NewDelegate;
+	NewDelegate.ThresholdValue = Value;
+	return Thresholds.Add_GetRef(MoveTemp(NewDelegate)).Delegate;
+}
+
+FAdaOnThresholdValueHit* FAdaAttribute::GetThresholdDelegate(const float Value)
+{
+	for (FAdaAttributeThresholdDelegate& Threshold : Thresholds)
+	{
+		if (FMath::IsNearlyEqual(Threshold.ThresholdValue, Value))
+		{
+			return &Threshold.Delegate;
+		}
+	}
+
+	return nullptr;
 }
 
 FAdaAttributeHandle::FAdaAttributeHandle(const UAdaGameplayStateComponent* const Owner, const FGameplayTag NewTag, const int32 NewIndex, const int32 NewId) :

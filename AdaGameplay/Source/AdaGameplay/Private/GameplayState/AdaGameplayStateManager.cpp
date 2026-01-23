@@ -8,6 +8,7 @@
 #include "Simulation/AdaTickManager.h"
 #include "GameplayState/AdaGameplayStateComponent.h"
 #include "Debug/AdaAssertionMacros.h"
+#include "GameplayState/AdaAttributeSet.h"
 
 DEFINE_LOG_CATEGORY(LogAdaGameplayStateManager);
 
@@ -101,6 +102,17 @@ const UCurveFloat* UAdaGameplayStateManager::GetCurveForModifier(const FGameplay
 	A_ENSURE_RET(CurveModifierRow, nullptr);
 
 	return CurveModifierRow->Curve;
+}
+
+const FAdaAttributeSet* UAdaGameplayStateManager::GetAttributeSet(const FGameplayTag SetTag) const
+{
+	const UDataRegistrySubsystem* const DataRegistrySubsystem = UDataRegistrySubsystem::Get();
+	A_ENSURE_RET(IsValid(DataRegistrySubsystem), nullptr);
+
+	const FAdaAttributeSet* const AttributeSetRow = DataRegistrySubsystem->GetCachedItem<FAdaAttributeSet>({AttributeSetRegistry, SetTag.GetTagName()});
+	A_ENSURE_RET(AttributeSetRow, nullptr);
+
+	return AttributeSetRow;
 }
 
 void UAdaGameplayStateManager::FixedTick(const uint64& CurrentFrame)

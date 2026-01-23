@@ -8,6 +8,7 @@
 
 #include "AdaGameplayStateManager.generated.h"
 
+struct FAdaAttributeSet;
 class UAdaGameplayStateComponent;
 class UAdaStatusEffectDefinition;
 
@@ -30,6 +31,7 @@ public:
 	void GetAllStatusEffectTags(TArray<FGameplayTag>& OutTags) const;
 
 	const UCurveFloat* GetCurveForModifier(const FGameplayTag CurveTag) const;
+	const FAdaAttributeSet* GetAttributeSet(const FGameplayTag SetTag) const;
 
 protected:
 	// Begin UActorComponent overrides
@@ -48,6 +50,9 @@ protected:
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
 	FDataRegistryType CurveModifierRegistry = "CurveModifiers";
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
+	FDataRegistryType AttributeSetRegistry = "AttributeSets";
 
 private:
 	struct FTickBucket
