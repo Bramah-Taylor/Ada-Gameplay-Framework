@@ -4,15 +4,15 @@
 	"VersionName": "0.1",
 	"FriendlyName": "AdaGameplay",
 	"Description": "Gameplay module of the Ada Framework.",
-	"Category": "Other",
+	"Category": "Gameplay",
 	"CreatedBy": "Matt Bramah-Taylor",
 	"CreatedByURL": "",
 	"DocsURL": "",
 	"MarketplaceURL": "",
 	"SupportURL": "",
 	"CanContainContent": true,
-	"IsBetaVersion": true,
-	"IsExperimentalVersion": false,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": true,
 	"Installed": false,
 	"Modules": [
 		{

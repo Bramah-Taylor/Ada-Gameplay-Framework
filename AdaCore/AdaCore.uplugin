@@ -1,10 +1,10 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.0",
+	"VersionName": "0.1",
 	"FriendlyName": "AdaCore",
 	"Description": "Core module of the Ada Framework.",
-	"Category": "Other",
+	"Category": "General",
 	"CreatedBy": "Matt Bramah-Taylor",
 	"CreatedByURL": "",
 	"DocsURL": "",
@@ -12,7 +12,7 @@
 	"SupportURL": "",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
-	"IsExperimentalVersion": false,
+	"IsExperimentalVersion": true,
 	"Installed": false,
 	"Modules": [
 		{
