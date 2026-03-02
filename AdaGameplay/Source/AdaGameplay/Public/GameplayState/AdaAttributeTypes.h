@@ -48,6 +48,14 @@ struct ADAGAMEPLAY_API FAdaAttributeInitParams
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float InitialValue = 0.0f;
 
+	// Whether we should modify the initial value by some random variance.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bUseRandomVariance = false;
+
+	// The min/max value to use for random variance.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "bUseRandomVariance", EditConditionHides))
+	float RandomVariance = 0.0f;
+
 	// Whether this attribute uses clamping or not.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bUsesClamping = false;
@@ -64,6 +72,14 @@ struct ADAGAMEPLAY_API FAdaAttributeInitParams
 	// Whether this attribute has a target value or not.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bUsesTargetValue = false;
+
+	// Whether this attribute has automatic thresholds we wish to respond to.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bUsesThresholds = false;
+
+	// The thresholds for this attribute that we wish to respond to.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "bUsesThresholds", EditConditionHides))
+	TSet<float> Thresholds;
 };
 
 // An attribute can be any arbitrary gameplay value.
@@ -85,14 +101,15 @@ public:
 	float GetCurrentValue() const;
 	float GetMaxValue(const bool bUseBase = false) const;
 	float GetMinValue(const bool bUseBase = false) const;
-
-	FAdaOnThresholdValueHit& AddThresholdDelegate(const float Value);
-	FAdaOnThresholdValueHit* GetThresholdDelegate(const float Value);
 	
 	inline int32 GetModifierCount() const { return ActiveModifiers.Num(); };
 	inline int32 GetDependencyCount() const { return AttributeDependencies.Num(); };
 	inline int32 GetIdentifier() const { return Identifier; };
 	inline float GetTargetValue() const { return TargetValue; };
+
+protected:
+	FAdaOnThresholdValueHit& AddThresholdDelegate(const float Value);
+	FAdaOnThresholdValueHit* GetThresholdDelegate(const float Value);
 
 public:
 	// The gameplay tag representing this attribute.

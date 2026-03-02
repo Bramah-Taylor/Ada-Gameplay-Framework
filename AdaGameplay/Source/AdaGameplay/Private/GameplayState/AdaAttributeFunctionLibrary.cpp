@@ -23,6 +23,17 @@ FAdaAttributeModifierHandle UAdaAttributeFunctionLibrary::InhibitAttribute(UAdaG
 	return StateComponent.ModifyAttribute(AttributeTag, Modifier);
 }
 
+FAdaAttributeModifierHandle UAdaAttributeFunctionLibrary::ModifyAttributeByAttribute(UAdaGameplayStateComponent& StateComponent, const FGameplayTag SourceAttribute, const FGameplayTag TargetAttribute)
+{
+	FAdaAttributeModifierSpec Modifier;
+	Modifier.ApplicationType = EAdaAttributeModApplicationType::Ticking;
+	Modifier.CalculationType = EAdaAttributeModCalcType::SetByAttribute;
+	Modifier.OperationType = EAdaAttributeModOpType::Additive;
+	Modifier.ModifyingAttribute = SourceAttribute;
+
+	return StateComponent.ModifyAttribute(TargetAttribute, Modifier);
+}
+
 bool UAdaAttributeFunctionLibrary::IsModifierValid(const FAdaAttributeModifierSpec& Modifier, TArray<FString>& OutErrors, const bool bEditorContext)
 {
 	bool bValidConfig = false;

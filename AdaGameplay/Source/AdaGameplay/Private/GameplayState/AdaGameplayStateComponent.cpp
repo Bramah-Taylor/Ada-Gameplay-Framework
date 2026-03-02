@@ -152,12 +152,25 @@ FAdaAttributeHandle UAdaGameplayStateComponent::AddAttribute(const FGameplayTag 
 		return FAdaAttributeHandle();
 	}
 
+	FAdaAttributeInitParams ModifiedInitParams = InitParams;
+
+	if (InitParams.bUseRandomVariance)
+	{
+		const float Variance = FMath::RandRange(-ModifiedInitParams.RandomVariance, ModifiedInitParams.RandomVariance);
+		ModifiedInitParams.InitialValue += Variance;
+	}
+
+	if (InitParams.bUsesClamping)
+	{
+		FMath::Clamp(ModifiedInitParams.InitialValue, ModifiedInitParams.InitialClampingValues.X, ModifiedInitParams.InitialClampingValues.Y);
+	}
+
 	const int32 Identifier = GetNextAttributeId();
-	const int32 Index = Attributes.Add(FAdaAttribute(AttributeTag, InitParams, Identifier));
+	const int32 Index = Attributes.Add(FAdaAttribute(AttributeTag, ModifiedInitParams, Identifier));
 
 	if (OnAttributeAdded.IsBound())
 	{
-		OnAttributeAdded.Broadcast(AttributeTag, InitParams.InitialValue);
+		OnAttributeAdded.Broadcast(AttributeTag, ModifiedInitParams.InitialValue);
 	}
 
 	return FAdaAttributeHandle(this, AttributeTag, Index, Identifier);
@@ -250,6 +263,18 @@ FAdaOnClampingValueHit* UAdaGameplayStateComponent::GetClampingNotifyDelegateFor
 	}
 
 	return &Attribute->OnClampingValueHit;
+}
+
+FAdaOnThresholdValueHit* UAdaGameplayStateComponent::GetThresholdDelegateForAttribute(const FGameplayTag AttributeTag, const float Value)
+{
+	FAdaAttribute* Attribute = FindAttribute_Internal(AttributeTag);
+	if (!Attribute)
+	{
+		UE_LOG(LogAdaGameplayState, Error, TEXT("%hs: Unable to find attribute %s on component %s"), __FUNCTION__, *AttributeTag.ToString(), *GetNameSafe(this));
+		return nullptr;
+	}
+
+	return &Attribute->AddThresholdDelegate(Value);
 }
 
 FAdaAttributeModifierHandle UAdaGameplayStateComponent::ModifyAttribute(const FGameplayTag AttributeTag, const FAdaAttributeModifierSpec& ModifierToApply)
