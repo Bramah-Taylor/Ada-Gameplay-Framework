@@ -163,7 +163,7 @@ FAdaAttributeHandle UAdaGameplayStateComponent::AddAttribute(const FGameplayTag 
 
 	if (InitParams.bUsesClamping)
 	{
-		FMath::Clamp(ModifiedInitParams.InitialValue, ModifiedInitParams.InitialClampingValues.X, ModifiedInitParams.InitialClampingValues.Y);
+		ModifiedInitParams.InitialValue = FMath::Clamp(ModifiedInitParams.InitialValue, ModifiedInitParams.InitialClampingValues.X, ModifiedInitParams.InitialClampingValues.Y);
 	}
 
 	const int32 Identifier = GetNextAttributeId();
@@ -684,10 +684,15 @@ bool UAdaGameplayStateComponent::RemoveModifier_Internal(FAdaAttributeModifier& 
 	FAdaAttribute* Attribute = FindAttribute_Internal(Modifier.AffectedAttribute);
 	A_ENSURE_RET(Attribute, false);
 
-	for (uint32 i = Attribute->ActiveModifiers.Num() - 1; i == 0; i--)
+	for (int32 i = Attribute->ActiveModifiers.Num() - 1; i >= 0; i--)
 	{
+		if (!ActiveModifiers.IsValidIndex(i))
+		{
+			break;
+		}
+		
 		FAdaAttributeModifierHandle& ModifierHandle = Attribute->ActiveModifiers[i];
-		if (A_ENSURE(ModifierHandle.Identifier != INDEX_NONE))
+		if (!A_ENSURE(ModifierHandle.Identifier != INDEX_NONE))
 		{
 			continue;
 		}
@@ -1029,11 +1034,11 @@ void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute
 	{
 		if (OldCurrent < Threshold.ThresholdValue && Attribute.CurrentValue >= Threshold.ThresholdValue)
 		{
-			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Threshold.ThresholdValue, EAdaAttributeDelta::Ascending);
+			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Threshold.ThresholdValue, Attribute.CurrentValue, EAdaAttributeDelta::Ascending);
 		}
 		else if (OldCurrent > Threshold.ThresholdValue && Attribute.CurrentValue <= Threshold.ThresholdValue)
 		{
-			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Threshold.ThresholdValue, EAdaAttributeDelta::Descending);
+			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Threshold.ThresholdValue, Attribute.CurrentValue, EAdaAttributeDelta::Descending);
 		}
 	}
 }
@@ -1099,8 +1104,13 @@ bool UAdaGameplayStateComponent::RemoveStatusEffect_Internal(const int32 Index)
 	ActiveStatusEffectTags.UpdateTagCount(StatusEffectTag, -1);
 
 	// Reverse iteration as we'll be modifying the active modifier handles array as we remove modifiers.
-	for (uint32 i = StatusEffect->ActiveModifierHandles.Num() - 1; i == 0; i--)
+	for (int32 i = StatusEffect->ActiveModifierHandles.Num() - 1; i >= 0; i--)
 	{
+		if (!StatusEffect->ActiveModifierHandles.IsValidIndex(i))
+		{
+			break;
+		}
+		
 		RemoveModifier(StatusEffect->ActiveModifierHandles[i]);
 	}
 	

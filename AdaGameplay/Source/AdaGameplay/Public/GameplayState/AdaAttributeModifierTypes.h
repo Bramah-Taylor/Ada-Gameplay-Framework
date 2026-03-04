@@ -332,7 +332,6 @@ public:
 
 	bool Remove();
 	
-private:
 	// The component that owns this modifier when it's valid.
 	TWeakObjectPtr<UAdaGameplayStateComponent> OwningStateComponentWeak = nullptr;
 
