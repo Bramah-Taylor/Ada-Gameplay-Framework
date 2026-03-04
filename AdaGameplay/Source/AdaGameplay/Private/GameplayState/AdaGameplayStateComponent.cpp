@@ -7,6 +7,7 @@
 #include "Debug/AdaAssertionMacros.h"
 #include "GameplayState/AdaAttributeFunctionLibrary.h"
 #include "GameplayState/AdaStatusEffect.h"
+#include "GameplayState/AdaStatusEffectDefinition.h"
 
 DEFINE_LOG_CATEGORY(LogAdaGameplayState);
 
@@ -1028,11 +1029,11 @@ void UAdaGameplayStateComponent::NotifyAttributeChanged(FAdaAttribute& Attribute
 	{
 		if (OldCurrent < Threshold.ThresholdValue && Attribute.CurrentValue >= Threshold.ThresholdValue)
 		{
-			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Attribute.CurrentValue, EAdaAttributeDelta::Ascending);
+			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Threshold.ThresholdValue, EAdaAttributeDelta::Ascending);
 		}
 		else if (OldCurrent > Threshold.ThresholdValue && Attribute.CurrentValue <= Threshold.ThresholdValue)
 		{
-			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Attribute.CurrentValue, EAdaAttributeDelta::Descending);
+			Threshold.Delegate.Broadcast(Attribute.AttributeTag, Threshold.ThresholdValue, EAdaAttributeDelta::Descending);
 		}
 	}
 }

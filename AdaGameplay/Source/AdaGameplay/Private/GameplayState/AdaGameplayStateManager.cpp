@@ -9,6 +9,7 @@
 #include "GameplayState/AdaGameplayStateComponent.h"
 #include "Debug/AdaAssertionMacros.h"
 #include "GameplayState/AdaAttributeSet.h"
+#include "GameplayState/AdaStatusEffectDefinition.h"
 
 DEFINE_LOG_CATEGORY(LogAdaGameplayStateManager);
 

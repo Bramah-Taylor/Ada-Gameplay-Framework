@@ -7,7 +7,6 @@
 
 #include "GameplayState/AdaAttributeTypes.h"
 #include "GameplayState/AdaAttributeModifierTypes.h"
-#include "GameplayState/AdaStatusEffectDefinition.h"
 #include "GameplayState/AdaStatusEffectTypes.h"
 
 #include "AdaGameplayStateComponent.generated.h"

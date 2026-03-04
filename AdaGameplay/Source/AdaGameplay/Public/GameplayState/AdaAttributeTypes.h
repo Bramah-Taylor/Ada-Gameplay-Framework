@@ -20,7 +20,7 @@ enum class EAdaAttributeDelta : uint8
 
 DECLARE_MULTICAST_DELEGATE_FiveParams(FAdaOnAttributeUpdated, const FGameplayTag /*AttributeTag*/, const float /*NewBase*/, const float /*NewCurrent*/, const float /*OldBase*/, const float /*OldCurrent*/);
 DECLARE_MULTICAST_DELEGATE_FourParams(FAdaOnClampingValueHit, const FGameplayTag /*AttributeTag*/, const float /*CurrentValue*/, const bool /*bIsMin*/, const bool /*bIsBase*/);
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FAdaOnThresholdValueHit, const FGameplayTag /*AttributeTag*/, const float /*CurrentValue*/, const EAdaAttributeDelta /*Delta*/);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FAdaOnThresholdValueHit, const FGameplayTag /*AttributeTag*/, const float /*ThresholdValue*/, const EAdaAttributeDelta /*Delta*/);
 
 USTRUCT()
 struct ADAGAMEPLAY_API FAdaAttributeThresholdDelegate
