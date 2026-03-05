@@ -72,14 +72,6 @@ struct ADAGAMEPLAY_API FAdaAttributeInitParams
 	// Whether this attribute has a target value or not.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bUsesTargetValue = false;
-
-	// Whether this attribute has automatic thresholds we wish to respond to.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	bool bUsesThresholds = false;
-
-	// The thresholds for this attribute that we wish to respond to.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "bUsesThresholds", EditConditionHides))
-	TSet<float> Thresholds;
 };
 
 // An attribute can be any arbitrary gameplay value.
