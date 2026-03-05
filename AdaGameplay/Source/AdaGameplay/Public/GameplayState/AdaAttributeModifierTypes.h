@@ -331,7 +331,8 @@ public:
 	const FAdaAttributeModifier* Get() const;
 
 	bool Remove();
-	
+
+protected:
 	// The component that owns this modifier when it's valid.
 	TWeakObjectPtr<UAdaGameplayStateComponent> OwningStateComponentWeak = nullptr;
 
