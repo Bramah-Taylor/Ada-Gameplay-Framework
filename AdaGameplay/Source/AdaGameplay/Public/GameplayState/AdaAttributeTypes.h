@@ -72,6 +72,10 @@ struct ADAGAMEPLAY_API FAdaAttributeInitParams
 	// Whether this attribute has a target value or not.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bUsesTargetValue = false;
+
+	// The rate at which we decay towards the target value without any modifiers.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (EditCondition = "bUsesTargetValue", EditConditionHides))
+	float TargetValueDecayRateScalar = 0.01f;
 };
 
 // An attribute can be any arbitrary gameplay value.
@@ -130,6 +134,10 @@ protected:
 	// Optional value that this attribute is trending towards as it changes.
 	UPROPERTY(BlueprintReadOnly)
 	float TargetValue = 0.0f;
+
+	// If we're using a target value, the base rate at which we decay towards it.
+	UPROPERTY(BlueprintReadOnly)
+	float TargetDecayRate = 0.0f;
 
 	// Clamping values applied to the base value of this attribute.
 	UPROPERTY(BlueprintReadOnly)

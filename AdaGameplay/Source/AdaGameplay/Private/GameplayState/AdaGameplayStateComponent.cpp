@@ -785,7 +785,7 @@ void UAdaGameplayStateComponent::ApplyImmediateModifier(FAdaAttribute& Attribute
 		CurrentValue = FMath::Clamp(CurrentValue, Attribute.CurrentClampingValues.X, Attribute.CurrentClampingValues.Y);
 	}
 
-	// We're deliberately ignoring any possible target values here as immediate modifiers should not be affected by the target; we're free too go
+	// We're deliberately ignoring any possible target values here as immediate modifiers should not be affected by the target; we're free to go
 	// above or below as needed.
 
 	const float OldBase = Attribute.BaseValue;
@@ -916,6 +916,19 @@ void UAdaGameplayStateComponent::RecalculateAttribute(FAdaAttribute& Attribute, 
 			}
 
 			Modifier->PostApply(CurrentTick);
+		}
+
+		// Decay towards target value slowly over time.
+		if (Attribute.bUsesTargetValue && !FMath::IsNearlyEqual(BaseValue, Attribute.TargetValue, 1E-03))
+		{
+			if (BaseValue > Attribute.TargetValue)
+			{
+				BaseValue -= Attribute.TargetDecayRate;
+			}
+			else
+			{
+				BaseValue += Attribute.TargetDecayRate;
+			}
 		}
 
 		BaseValue = ((BaseValue + AggregatedBaseAdditives) * AggregatedBaseMultipliers) + AggregatedBasePostAdditives;

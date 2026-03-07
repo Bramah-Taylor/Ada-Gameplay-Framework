@@ -10,6 +10,7 @@ FAdaAttribute::FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitPara
 	ResetValue(InitParams.InitialValue),
 	BaseValue(InitParams.InitialValue),
 	CurrentValue(InitParams.InitialValue),
+	TargetDecayRate(InitParams.TargetValueDecayRateScalar),
 	BaseClampingValues(InitParams.InitialClampingValues),
 	CurrentClampingValues(InitParams.InitialClampingValues),
 	bUsesClamping(InitParams.bUsesClamping),
