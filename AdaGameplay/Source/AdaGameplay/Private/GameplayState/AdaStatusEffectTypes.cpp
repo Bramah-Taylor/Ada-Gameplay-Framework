@@ -6,6 +6,8 @@
 #include "GameplayState/AdaGameplayStateComponent.h"
 #include "GameplayState/AdaStatusEffect.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaStatusEffectTypes)
+
 FAdaStatusEffectHandle::FAdaStatusEffectHandle(UAdaGameplayStateComponent* Owner, const int32 InIndex, const int32 InId) :
 	OwningStateComponentWeak(Owner),
 	Index(InIndex),

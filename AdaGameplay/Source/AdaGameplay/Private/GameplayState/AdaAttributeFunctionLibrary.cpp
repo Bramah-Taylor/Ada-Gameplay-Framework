@@ -5,6 +5,8 @@
 #include "GameplayState/AdaAttributeTypes.h"
 #include "GameplayState/AdaGameplayStateComponent.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaAttributeFunctionLibrary)
+
 FAdaAttributeModifierHandle UAdaAttributeFunctionLibrary::InhibitAttribute(UAdaGameplayStateComponent& StateComponent, const FGameplayTag AttributeTag)
 {
 	FAdaAttribute* FoundAttribute = StateComponent.FindAttribute_Internal(AttributeTag);

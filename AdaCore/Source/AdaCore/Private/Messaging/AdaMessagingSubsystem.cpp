@@ -4,6 +4,8 @@
 
 #include "Debug/AdaAssertionMacros.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaMessagingSubsystem)
+
 DEFINE_LOG_CATEGORY(LogAdaMessagingSubsystem);
 
 UAdaMessagingSubsystem* UAdaMessagingSubsystem::Get(const UObject* WorldContextObject)

@@ -9,6 +9,8 @@
 #include "GameplayState/AdaStatusEffect.h"
 #include "GameplayState/AdaStatusEffectDefinition.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaGameplayStateComponent)
+
 DEFINE_LOG_CATEGORY(LogAdaGameplayState);
 
 UAdaGameplayStateComponent::UAdaGameplayStateComponent()

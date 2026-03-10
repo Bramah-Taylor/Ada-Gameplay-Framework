@@ -6,6 +6,8 @@
 
 #include "Debug/AdaAssertionMacros.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaTaggedTableRow)
+
 void FAdaTaggedTableRow::OnDataTableChanged(const UDataTable* InDataTable, const FName InRowName)
 {
 	Super::OnDataTableChanged(InDataTable, InRowName);

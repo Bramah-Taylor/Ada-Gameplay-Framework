@@ -5,6 +5,8 @@
 #include "Debug/AdaAssertionMacros.h"
 #include "GameplayState/AdaGameplayStateManager.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaGameState)
+
 AAdaGameState::AAdaGameState(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {

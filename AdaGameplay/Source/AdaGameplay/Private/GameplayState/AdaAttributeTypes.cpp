@@ -5,6 +5,8 @@
 #include "Debug/AdaAssertionMacros.h"
 #include "GameplayState/AdaGameplayStateComponent.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaAttributeTypes)
+
 FAdaAttribute::FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitParams& InitParams, const int32 NewId) :
 	AttributeTag(Tag),
 	ResetValue(InitParams.InitialValue),

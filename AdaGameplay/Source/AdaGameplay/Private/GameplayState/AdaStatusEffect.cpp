@@ -1,6 +1,9 @@
 // Copyright Matt Bramah-Taylor, 2025. All Rights Reserved.
 
 #include "GameplayState/AdaStatusEffect.h"
+#include "GameplayState/AdaAttributeTypes.h"
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaStatusEffect)
 
 bool UAdaStatusEffect::ShouldRecalculateModifier(const FGameplayTag AttributeTag)
 {

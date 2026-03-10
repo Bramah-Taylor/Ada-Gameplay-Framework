@@ -7,6 +7,8 @@
 #include "Debug/AdaAssertionMacros.h"
 #include "GameplayState/AdaAttributeFunctionLibrary.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaAttributeModifierTypes)
+
 void FAdaAttributeModifierSpec::SetPeriodicData(uint8 InInterval, uint32 InDuration, bool bApplyOnAdd, bool bApplyOnRemoval)
 {
 	if (ApplicationType != EAdaAttributeModApplicationType::Periodic)

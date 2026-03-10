@@ -5,6 +5,8 @@
 #include "Simulation/AdaTickManagerSettings.h"
 #include "Debug/AdaAssertionMacros.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaTickManager)
+
 void UAdaTickManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	const UWorld* const World = GetWorld();

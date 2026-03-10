@@ -11,6 +11,8 @@
 #include "GameplayState/AdaAttributeSet.h"
 #include "GameplayState/AdaStatusEffectDefinition.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaGameplayStateManager)
+
 DEFINE_LOG_CATEGORY(LogAdaGameplayStateManager);
 
 UAdaGameplayStateManager::UAdaGameplayStateManager()

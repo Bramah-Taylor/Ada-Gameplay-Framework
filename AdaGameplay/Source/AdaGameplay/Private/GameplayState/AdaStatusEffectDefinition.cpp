@@ -5,6 +5,8 @@
 #include "GameplayState/AdaAttributeFunctionLibrary.h"
 #include "Misc/DataValidation.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AdaStatusEffectDefinition)
+
 #define LOCTEXT_NAMESPACE "AdaStatusEffect"
 
 FPrimaryAssetId UAdaStatusEffectDefinition::GetPrimaryAssetId() const
