@@ -14,7 +14,7 @@ class ADAGAMEPLAY_API AAdaGameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
-	AAdaGameState(const FObjectInitializer& ObjectInitializer);
+	AAdaGameState();
 
 	inline UAdaGameplayStateManager* GetGameplayStateManager() const {return GameplayStateManager; };
 

@@ -7,8 +7,7 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AdaGameState)
 
-AAdaGameState::AAdaGameState(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
+AAdaGameState::AAdaGameState()
 {
 	GameplayStateManager = CreateDefaultSubobject<UAdaGameplayStateManager>("GameplayStateManager");
 	A_ENSURE(IsValid(GameplayStateManager));
