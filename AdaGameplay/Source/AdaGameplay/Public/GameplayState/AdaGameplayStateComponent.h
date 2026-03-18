@@ -29,6 +29,11 @@ class ADAGAMEPLAY_API UAdaGameplayStateComponent : public UActorComponent
 public:	
 	UAdaGameplayStateComponent();
 
+	// #TODO(Ada.Gameplay): Move to child class in game module
+	inline const TSparseArray<FAdaAttribute>& GetAllAttributes() const { return Attributes; };
+	inline const TSparseArray<FAdaAttributeModifier>& GetAllModifiers() const { return ActiveModifiers; };
+	inline const FAdaGameplayTagCountContainer& GetActiveState() const { return ActiveStates; };
+
 	/// @brief	Add an attribute to this component with some initial data.
 	/// @param	AttributeTag	The attribute we want to add.
 	/// @param	InitParams		Parameters for setting the initial state of this attribute.
@@ -141,11 +146,6 @@ public:
 	/// @param	StateTag		The tag to add.
 	/// @return Whether this component successfully removed the tag.
 	bool RemoveStateTag(const FGameplayTag StateTag);
-
-	// #TODO(Ada.Gameplay): Move to child class in game module
-	inline const TSparseArray<FAdaAttribute>& GetAllAttributes() const { return Attributes; };
-	inline const TSparseArray<FAdaAttributeModifier>& GetAllModifiers() const { return ActiveModifiers; };
-	inline const FAdaGameplayTagCountContainer& GetActiveState() const { return ActiveStates; };
 
 public:
 	// Delegate that broadcasts whenever an attribute is added to this component.

@@ -92,16 +92,16 @@ struct ADAGAMEPLAY_API FAdaAttribute
 public:
 	FAdaAttribute() = default;
 	FAdaAttribute(const FGameplayTag Tag, const FAdaAttributeInitParams& InitParams, const int32 NewId);
+
+	inline int32 GetModifierCount() const { return ActiveModifiers.Num(); };
+	inline int32 GetDependencyCount() const { return AttributeDependencies.Num(); };
+	inline int32 GetIdentifier() const { return Identifier; };
+	inline float GetTargetValue() const { return TargetValue; };
 	
 	float GetBaseValue() const;
 	float GetCurrentValue() const;
 	float GetMaxValue(const bool bUseBase = false) const;
 	float GetMinValue(const bool bUseBase = false) const;
-	
-	inline int32 GetModifierCount() const { return ActiveModifiers.Num(); };
-	inline int32 GetDependencyCount() const { return AttributeDependencies.Num(); };
-	inline int32 GetIdentifier() const { return Identifier; };
-	inline float GetTargetValue() const { return TargetValue; };
 
 protected:
 	FAdaOnThresholdValueHit& AddThresholdDelegate(const float Value);
