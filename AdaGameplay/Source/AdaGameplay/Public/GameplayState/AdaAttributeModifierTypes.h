@@ -243,7 +243,7 @@ protected:
 	void SetModifyingAttribute(const FAdaAttribute& InAttribute);
 	void SetModifierCurve(const UCurveFloat* const InModifierCurve);
 
-	// #TODO: Replace with attribute handles?
+	// #TODO(Ada.Gameplay): Replace with attribute handles?
 	FGameplayTag AffectedAttribute = FGameplayTag::EmptyTag;
 	FGameplayTag ModifyingAttribute = FGameplayTag::EmptyTag;
 	

@@ -75,7 +75,7 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentTick)
 			continue;
 		}
 
-		// #TODO: Replace with index from handle?
+		// #TODO(Ada.Gameplay): Replace with index from handle?
 		FAdaAttribute* FoundAttribute = FindAttribute_Internal(Modifier.AffectedAttribute);
 		if (!FoundAttribute)
 		{

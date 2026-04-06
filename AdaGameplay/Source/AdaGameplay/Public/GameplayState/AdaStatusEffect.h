@@ -22,7 +22,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	inline FGameplayTag GetEffectTag() const { return EffectTag; };
 
-	// #TODO: Does this setup still make sense, or can we remove the _BP function and have this be native instead?
+	// #TODO(Ada.Gameplay): Does this setup still make sense, or can we remove the _BP function and have this be native instead?
 	UFUNCTION()
 	bool ShouldRecalculateModifier(const FGameplayTag AttributeTag);
 
