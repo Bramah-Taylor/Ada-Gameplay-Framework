@@ -3,6 +3,8 @@
 #pragma once
 
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "UObject/Class.h"
+#include "UObject/ObjectKey.h"
 #include "AdaMessagingSubsystem.generated.h"
 
 class UAdaMessagingSubsystem;

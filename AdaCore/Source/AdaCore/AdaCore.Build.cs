@@ -7,6 +7,7 @@ public class AdaCore : ModuleRules
 	public AdaCore(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		CppStandard = CppStandardVersion.Latest;
 		
 		PublicIncludePaths.AddRange(new string[] 
 		{
@@ -30,8 +31,7 @@ public class AdaCore : ModuleRules
 			"CoreUObject",
 			"Engine",
 			"Slate",
-			"SlateCore",
-			"DataTableEditor"
+			"SlateCore"
 		});
 		
 		DynamicallyLoadedModuleNames.AddRange(new string[]

@@ -2,6 +2,7 @@
 
 #include "Simulation/AdaTickManager.h"
 
+#include "Engine/World.h"
 #include "Simulation/AdaTickManagerSettings.h"
 #include "Debug/AdaAssertionMacros.h"
 

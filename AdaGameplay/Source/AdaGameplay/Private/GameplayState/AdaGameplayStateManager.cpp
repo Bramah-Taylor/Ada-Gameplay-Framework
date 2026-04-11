@@ -2,8 +2,10 @@
 
 #include "GameplayState/AdaGameplayStateManager.h"
 
+#include "Engine/World.h"
 #include "DataRegistrySubsystem.h"
 #include "Engine/AssetManager.h"
+#include "Curves/CurveFloat.h"
 
 #include "Simulation/AdaTickManager.h"
 #include "GameplayState/AdaGameplayStateComponent.h"

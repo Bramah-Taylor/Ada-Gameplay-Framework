@@ -2,6 +2,7 @@
 
 #include "GameplayState/AdaAttributeModifierTypes.h"
 
+#include "Curves/CurveFloat.h"
 #include "GameplayState/AdaGameplayStateComponent.h"
 #include "GameplayState/AdaStatusEffect.h"
 #include "Debug/AdaAssertionMacros.h"

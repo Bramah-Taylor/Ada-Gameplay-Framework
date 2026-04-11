@@ -7,6 +7,7 @@ public class AdaGameplayEditor : ModuleRules
 	public AdaGameplayEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		CppStandard = CppStandardVersion.Latest;
 		
 		PublicIncludePaths.AddRange(new string[] 
 		{

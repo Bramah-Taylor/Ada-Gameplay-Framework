@@ -5,12 +5,14 @@
 #include "GameplayTagContainer.h"
 #include "Components/ActorComponent.h"
 #include "DataRegistryId.h"
+#include "UObject/ObjectKey.h"
 
 #include "AdaGameplayStateManager.generated.h"
 
 struct FAdaAttributeSet;
 class UAdaGameplayStateComponent;
 class UAdaStatusEffectDefinition;
+class UCurveFloat;
 
 #define ADA_TICK_BUCKET_COUNT 15
 
@@ -23,6 +25,12 @@ class ADAGAMEPLAY_API UAdaGameplayStateManager : public UActorComponent
 
 public:	
 	UAdaGameplayStateManager();
+	
+	// Begin UActorComponent overrides
+	virtual void InitializeComponent() override;
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	// End UActorComponent overrides.
 
 	void RegisterStateComponent(UAdaGameplayStateComponent* StateComponent);
 	void UnregisterStateComponent(UAdaGameplayStateComponent* StateComponent);
@@ -34,12 +42,6 @@ public:
 	const FAdaAttributeSet* GetAttributeSet(const FGameplayTag SetTag) const;
 
 protected:
-	// Begin UActorComponent overrides
-	virtual void InitializeComponent() override;
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	// End UActorComponent overrides.
-
 	void FixedTick(const uint64& CurrentFrame);
 
 	void IncrementAssignmentCounter();

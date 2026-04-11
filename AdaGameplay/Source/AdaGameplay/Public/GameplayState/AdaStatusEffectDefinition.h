@@ -3,6 +3,7 @@
 #pragma once
 
 #include "GameplayTagContainer.h"
+#include "Engine/DataAsset.h"
 
 #include "AdaAttributeModifierTypes.h"
 

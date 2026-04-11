@@ -2,6 +2,7 @@
 
 #include "GameplayState/AdaGameplayStateComponent.h"
 
+#include "Engine/World.h"
 #include "GameFramework/AdaGameState.h"
 #include "GameplayState/AdaGameplayStateManager.h"
 #include "Debug/AdaAssertionMacros.h"

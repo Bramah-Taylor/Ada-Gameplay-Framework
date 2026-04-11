@@ -7,9 +7,10 @@
 
 #include "AdaAttributeModifierTypes.generated.h"
 
-class UAdaStatusEffect;
 struct FAdaAttribute;
 class UAdaGameplayStateComponent;
+class UAdaStatusEffect;
+class UCurveFloat;
 
 // Modifiers come in many different varieties, and as such have a wide variety of behaviours based on combinations of their
 // application type and calculation type. Below is a description of how the different types are intended to be used.
