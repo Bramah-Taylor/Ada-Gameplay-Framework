@@ -14,6 +14,7 @@ FPrimaryAssetId UAdaStatusEffectDefinition::GetPrimaryAssetId() const
 	return FPrimaryAssetId(PrimaryAssetType, EffectTag.GetTagName());
 }
 
+#if WITH_EDITOR
 EDataValidationResult UAdaStatusEffectDefinition::IsDataValid(FDataValidationContext& Context) const
 {
 	EDataValidationResult Result = Super::IsDataValid(Context);
@@ -47,5 +48,6 @@ EDataValidationResult UAdaStatusEffectDefinition::IsDataValid(FDataValidationCon
 
 	return Result;
 }
+#endif
 
 #undef LOCTEXT_NAMESPACE
