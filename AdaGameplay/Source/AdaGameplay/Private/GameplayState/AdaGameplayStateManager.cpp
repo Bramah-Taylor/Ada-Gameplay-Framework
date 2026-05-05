@@ -49,17 +49,20 @@ void UAdaGameplayStateManager::BeginPlay()
 
 void UAdaGameplayStateManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	UWorld* World = GetWorld();
+	ON_SCOPE_EXIT
+	{
+		Super::EndPlay(EndPlayReason);
+	};
+	
+	const UWorld* const World = GetWorld();
 	A_VALIDATE_OBJ(World, void());
 
-	UAdaTickManager* TickManager = World->GetSubsystem<UAdaTickManager>();
+	UAdaTickManager* const TickManager = World->GetSubsystem<UAdaTickManager>();
 	A_VALIDATE_OBJ(TickManager, void());
 
 	TickManager->UnregisterTickFunction(this);
 
 	LoadedStatusEffectDefinitions.Empty();
-	
-	Super::EndPlay(EndPlayReason);
 }
 
 void UAdaGameplayStateManager::RegisterStateComponent(UAdaGameplayStateComponent* StateComponent)
