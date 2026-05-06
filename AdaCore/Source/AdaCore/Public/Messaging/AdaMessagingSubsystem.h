@@ -7,12 +7,15 @@
 #include "UObject/ObjectKey.h"
 #include "AdaMessagingSubsystem.generated.h"
 
+class AActor;
 class UAdaMessagingSubsystem;
 
 USTRUCT(BlueprintType)
 struct FAdaMessageListenerHandle
 {
 	GENERATED_BODY()
+
+	friend UAdaMessagingSubsystem;
 
 public:
 	FAdaMessageListenerHandle() {}
@@ -25,10 +28,6 @@ private:
 
 	UPROPERTY(Transient)
 	int32 ID = 0;
-
-	FDelegateHandle StateClearedHandle;
-
-	friend UAdaMessagingSubsystem;
 
 	FAdaMessageListenerHandle( const FName InChannel, const int32 InID) : Channel(InChannel), ID(InID) {}
 };

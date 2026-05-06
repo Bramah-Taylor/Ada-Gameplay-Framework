@@ -108,7 +108,7 @@ void UAdaMessagingSubsystem::UnregisterListenerInternal(const FName Channel, con
 			ChannelListeners->Listeners.RemoveAtSwap(MatchIndex);
 		}
 
-		if (ChannelListeners->Listeners.Num() == 0)
+		if (ChannelListeners->Listeners.IsEmpty())
 		{
 			ListenerMap.Remove(Channel);
 		}
