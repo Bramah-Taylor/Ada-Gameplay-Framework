@@ -1,6 +1,6 @@
 # Ada Gameplay Framework
  
-Framework containing various classes and utilities which I use for the development of personal projects in UE5, currently built to support UE 5.6.
+Framework containing various classes and utilities which I use for the development of personal projects in UE5, currently built to support UE 5.7.4
 
 Right now, the framework contains the following:
 
