@@ -91,12 +91,12 @@ public:
 	{
 		TWeakObjectPtr<TOwner> WeakObject(Object);
 		return RegisterListener(ConditionTag, [WeakObject, Function]()
+		{
+			if (TOwner* StrongObject = WeakObject.Get())
 			{
-				if (TOwner* StrongObject = WeakObject.Get())
-				{
-					(StrongObject->*Function)();
-				}
-			});
+				(StrongObject->*Function)();
+			}
+		});
 	}
 	
 private:
