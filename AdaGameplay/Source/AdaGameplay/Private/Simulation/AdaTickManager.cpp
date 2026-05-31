@@ -74,6 +74,17 @@ void UAdaTickManager::UnregisterTickFunction(const UObject* const Object)
 
 void UAdaTickManager::OnWorldPreActorTick(UWorld* InWorld, ELevelTick InLevelTick, float InDeltaSeconds)
 {
+	A_ENSURE_RET(IsValid(InWorld), void());
+	if (InWorld->WorldType != EWorldType::PIE && InWorld->WorldType != EWorldType::Game)
+	{
+		return;
+	}
+	
+	if (InWorld->IsPaused())
+	{
+		return;
+	}
+	
 	const float EngineFrameDeltaTimeMS = InDeltaSeconds * 1000.0f;
 
 	UnspentTimeMS += EngineFrameDeltaTimeMS;
@@ -91,7 +102,7 @@ void UAdaTickManager::OnWorldPreActorTick(UWorld* InWorld, ELevelTick InLevelTic
 		for (const FTickFunction& TickFunction : TickFunctions)
 		{
 			const UObject* const ObjectToTick = TickFunction.ObjectToTick.Get();
-			if (!ensureMsgf(IsValid(ObjectToTick), TEXT("%hs: Invalid object!"), __FUNCTION__))
+			if (!A_ENSURE_MSG(IsValid(ObjectToTick), TEXT("%hs: Invalid object!"), __FUNCTION__))
 			{
 				continue;
 			}
