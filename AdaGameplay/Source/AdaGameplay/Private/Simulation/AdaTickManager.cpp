@@ -75,7 +75,7 @@ void UAdaTickManager::UnregisterTickFunction(const UObject* const Object)
 void UAdaTickManager::OnWorldPreActorTick(UWorld* InWorld, ELevelTick InLevelTick, float InDeltaSeconds)
 {
 	A_ENSURE_RET(IsValid(InWorld), void());
-	if (InWorld->WorldType != EWorldType::PIE && InWorld->WorldType != EWorldType::Game)
+	if (InWorld != GetWorld())
 	{
 		return;
 	}
