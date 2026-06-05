@@ -13,6 +13,7 @@
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FAdaOnAttributeAdded, const FGameplayTag /*AttributeTag*/, const float /*InitialValue*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FAdaOnAttributeRemoved, const FGameplayTag /*AttributeTag*/);
+DECLARE_MULTICAST_DELEGATE(FAdaOnPostFixedTick);
 
 DECLARE_LOG_CATEGORY_EXTERN(LogAdaGameplayState, Log, All);
 
@@ -28,11 +29,11 @@ class ADAGAMEPLAY_API UAdaGameplayStateComponent : public UActorComponent
 
 public:	
 	UAdaGameplayStateComponent();
-
-	// #TODO(Ada.Gameplay): Move to child class in game module
-	inline const TSparseArray<FAdaAttribute>& GetAllAttributes() const { return Attributes; };
-	inline const TSparseArray<FAdaAttributeModifier>& GetAllModifiers() const { return ActiveModifiers; };
-	inline const FAdaGameplayTagCountContainer& GetActiveState() const { return ActiveStates; };
+	
+	// Begin UActorComponent overrides.
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	// End UActorComponent overrides.
 
 	/// @brief	Add an attribute to this component with some initial data.
 	/// @param	AttributeTag	The attribute we want to add.
@@ -153,12 +154,11 @@ public:
 
 	// Delegate that broadcasts whenever an attribute is removed from this component.
 	FAdaOnAttributeRemoved OnAttributeRemoved;
+	
+	// Delegate that broadcasts at the end of FixedTick.
+	FAdaOnPostFixedTick OnPostFixedTick;
 
 protected:
-	// Begin UActorComponent overrides.
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	// End UActorComponent overrides.
 
 	void FixedTick(const uint64& CurrentTick);
 

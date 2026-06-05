@@ -146,6 +146,11 @@ void UAdaGameplayStateComponent::FixedTick(const uint64& CurrentTick)
 	{
 		RemoveModifier_Internal(ExpiredModifier, Index);
 	}
+	
+	if (OnPostFixedTick.IsBound())
+	{
+		OnPostFixedTick.Broadcast();
+	}
 }
 
 FAdaAttributeHandle UAdaGameplayStateComponent::AddAttribute(const FGameplayTag AttributeTag, const FAdaAttributeInitParams& InitParams)
