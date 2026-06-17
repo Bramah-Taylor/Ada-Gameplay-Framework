@@ -6,9 +6,25 @@
 
 DEFINE_LOG_CATEGORY(LogAdaDelegateStack);
 
+bool FAdaStackDelegateHandle::IsValid() const
+{
+	return HandleID != INDEX_NONE;
+}
+
+void FAdaStackDelegateHandle::Invalidate()
+{
+	HandleID = INDEX_NONE;
+}
+
 void FAdaDelegateStack::UnregisterDelegate(FAdaStackDelegateHandle& DelegateHandle)
 {
-	int32 FoundIndex = -1;
+	// Previously invalidated, ignore.
+	if (DelegateHandle.HandleID == INDEX_NONE)
+	{
+		return;
+	}
+	
+	int32 FoundIndex = INDEX_NONE;
 	for (int32 i = 0; i < CallbackStack.Num(); i++)
 	{
 		if (CallbackStack[i].HandleID == DelegateHandle.HandleID)
@@ -45,7 +61,7 @@ FAdaStackDelegateHandle FAdaDelegateStack::Push(const FAdaDelegateStackParams& S
 
 void FAdaDelegateStack::Pop()
 {
-	FCallbackData EntryData = CallbackStack.Pop();
+	const FCallbackData EntryData = CallbackStack.Pop();
 	EntryData.Callback();
 	
 	if (EntryData.StackBehavior == EAdaDelegateCallbackType::CallNext)

@@ -27,9 +27,14 @@ struct ADACORE_API FAdaStackDelegateHandle
 	GENERATED_BODY()
 	
 	friend struct FAdaDelegateStack;
+	
+public:
+	bool IsValid() const;
+	
+	void Invalidate();
 
 protected:
-	int32 HandleID = 0;
+	int32 HandleID = INDEX_NONE;
 };
 
 // Container that represents a stack of delegates that get broadcast one at a time, LIFO, for when you don't want all the callbacks in a
